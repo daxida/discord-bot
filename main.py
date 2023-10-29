@@ -2,7 +2,7 @@ import discord
 from discord import app_commands
 from dotenv import dotenv_values
 from wordref.wordref import Wordref
-from gr_datetime.gr_date import get_date
+from gr_datetime.gr_date import get_full_date
 
 
 config = dotenv_values('.env')
@@ -101,7 +101,7 @@ async def self(interaction: discord.Interaction):
     name="date",
     description="Prompts date in Fidis format")
 async def self(interaction: discord.Interaction):
-    await interaction.response.send_message(get_date())
+    await interaction.response.send_message(get_full_date())
 
 
 if __name__ == '__main__':
