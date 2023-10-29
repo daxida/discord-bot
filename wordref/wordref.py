@@ -1,9 +1,6 @@
 import requests
-import os
 import re
-
 from wordref.entry import Entry
-
 from bs4 import BeautifulSoup
 from typing import List
 

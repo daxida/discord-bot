@@ -1,13 +1,11 @@
-import random
 import re
 import unicodedata
 
 
 def LCS(a, b):
-    ''' Finds the longuest common substring of a and b '''
+    """Finds the longuest common substring of a and b"""
     if a == b:
         return len(a)
-    best = ''
     var = 0
     while a:
         i = 1
@@ -19,15 +17,14 @@ def LCS(a, b):
                 break
         if i - 1 > var:
             var = i - 1
-            best = a[:var]
         a = a[i:]
 
     return var
 
 
 def remove_accents(word):
-    normalized = unicodedata.normalize('NFKD', word)
-    return ''.join(c for c in normalized if not unicodedata.combining(c))
+    normalized = unicodedata.normalize("NFKD", word)
+    return "".join(c for c in normalized if not unicodedata.combining(c))
 
 
 def get_delta(a, b):
@@ -43,7 +40,7 @@ def get_delta(a, b):
 def highlightSynonyms(sentence, synonyms_list):
     for word in set(sentence.split()):
         # Removes punctuation to match the correct words
-        word = re.sub(r'\(|\)|,|\.|', '', word)  # add ; ??
+        word = re.sub(r"\(|\)|,|\.|", "", word)  # add ; ??
         for synonym in synonyms_list:
             # 1 = same word, 0 = completely different
             dif = get_delta(word, synonym)
@@ -54,5 +51,3 @@ def highlightSynonyms(sentence, synonyms_list):
                 break
 
     return sentence
-
-
