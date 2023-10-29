@@ -1,6 +1,7 @@
 import discord
 from discord import app_commands
 from dotenv import dotenv_values
+from help.help import HelpMessage
 from wordref.wordref import Wordref
 from gr_datetime.gr_date import get_full_date
 
@@ -73,15 +74,7 @@ async def self(interaction: discord.Interaction, word: str):
     await interaction.response.send_message(embed=Wordref(word=word, GrEn=False).embed())
 
 
-HELP_MESSAGE = """
-```You have four commands (and this help) available:
-1. wotdgr ---> random greek word entry
-2. wotden ---> random english word
-3. searchgr -> (+greek word) searches the given greek word
-4. searchen -> (+english word) searches the given english word
-5. randomq --> (WIP) random greek question (from a set dabase)
-6. helprafa -> prompts this help message```
-"""
+
 
 # https://plainenglish.io/blog/send-an-embed-with-a-discord-bot-in-python
 @tree.command(
@@ -91,7 +84,7 @@ async def self(interaction: discord.Interaction):
     embed = discord.Embed(
         title="Explains rafabot",
         # url="https://realdrewdata.medium.com/",
-        description=HELP_MESSAGE,
+        description=HelpMessage().message,
         color=0xFF5733
     )
     await interaction.response.send_message(embed=embed)
