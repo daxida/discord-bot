@@ -1,6 +1,7 @@
 import requests
 import re
 from wordref.entry import Entry
+from wordref.greeklish import greeklish_to_greek
 from bs4 import BeautifulSoup
 from typing import List, Tuple
 
@@ -62,6 +63,11 @@ class Wordref:
 
     def __init__(self, word: str, GrEn: bool, amount_sentences_shown=5):
         self.word = word
+
+        # Support greeklish (try fetching the greekified word)
+        if GrEn and is_english(word):
+            self.word = greeklish_to_greek(word)
+
         self.GrEn = GrEn
         self.amount_sentences_shown = amount_sentences_shown
         self.entry = None
