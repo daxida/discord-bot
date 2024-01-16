@@ -17,7 +17,7 @@ class Entry:
         self.POS = ""  # Parts of speech
         self.is_good_entry = False
 
-    def diagnostic(self):
+    def diagnostic(self) -> None:
         if not self.link:
             print(f"Exiting, couldn't find the link.")
             return
@@ -41,14 +41,14 @@ class Entry:
 
         self.is_good_entry = True
 
-    def sort_by_contains_word(self):
+    def sort_by_contains_word(self) -> None:
         self.sentences = list(self.sentences)
         if self.GrEn:
             self.sentences.sort(key=lambda pair: self.gr_word in pair[0], reverse=True)
         else:
             self.sentences.sort(key=lambda pair: self.en_word in pair[0], reverse=True)
 
-    def debug(self, sentences_shown=10):
+    def debug(self, sentences_shown=10) -> None:
         """Stringifies the entry in a debug format"""
 
         print()
@@ -86,7 +86,7 @@ class Entry:
             # webbrowser.open_new(f"https://{encoded_url}")
             print(f"https://{encoded_url}")
 
-    def to_embed(self, sentences_shown=10):
+    def to_embed(self, sentences_shown=10) -> discord.Embed:
         """
         Turns the entry into a Discord embed.
         https://plainenglish.io/blog/send-an-embed-with-a-discord-bot-in-python
@@ -102,7 +102,7 @@ class Entry:
         tail_POS = f" - *{self.POS}*" if self.POS else ""
         title += f"{self.gr_word}{tail_POS} ∙∙∙∙∙"
 
-        # desc formatting
+        # descprition formatting
         desc = ""
         desc += f"**Translations:** ||{self.en_word}||\n"
         desc += "**Sentences:**\n"

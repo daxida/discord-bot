@@ -2,7 +2,7 @@ import requests
 import re
 from wordref.entry import Entry
 from bs4 import BeautifulSoup
-from typing import List
+from typing import List, Tuple
 
 
 attributes_el = {
@@ -78,9 +78,10 @@ class Wordref:
             else:
                 self.url = f"{self.wordref_url}/engr/{self.word}"
 
-        found, message = False, None
+        found = False
+        max_iterations = 5
 
-        while not found:
+        for _ in range(max_iterations):
             found, entry = self.fetch()
 
             # To prevent Discord message length error later on:
@@ -88,9 +89,12 @@ class Wordref:
             if len(entry.to_embed(self.amount_sentences_shown)) >= 2000:
                 found = False
 
+            if found:
+                break
+
         self.entry = entry
 
-    def debug(self):
+    def debug(self) -> None:
         """Tries to fetch an entry. Then returns the stringified version."""
         if not self.entry:
             self.run()
@@ -102,14 +106,14 @@ class Wordref:
             self.run()
         return self.entry.to_embed(self.amount_sentences_shown)
 
-    def fetch(self, min_sentences=1):
+    def fetch(self, min_sentences=1) -> Tuple[bool, Entry]:
         """Fetches an entry"""
 
         assert min_sentences <= self.amount_sentences_shown
 
         response = requests.get(self.url)
         if response.status_code != 200:
-            print(f"Couldn't find {word}, sorry!")
+            print(f"Couldn't find {word}!")
             return False, None
 
         soup = BeautifulSoup(response.text, "html.parser")
