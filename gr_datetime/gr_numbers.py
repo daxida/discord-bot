@@ -1,23 +1,52 @@
 # https://github.com/savoirfairelinux/num2words doesn't support greek
 
-units = ['', 'ένα', 'δύο', 'τρία', 'τέσσερα',
-         'πέντε', 'έξι', 'επτά', 'οκτώ', 'εννέα']
-tens = ['', 'δέκα', 'είκοσι', 'τριάντα', 'σαράντα',
-        'πενήντα', 'εξήντα', 'εβδομήντα', 'ογδόντα', 'ενενήντα']
-teens = ['', 'έντεκα', 'δώδεκα', 'δεκατρία', 'δεκατέσσερα',
-         'δεκαπέντε', 'δεκαέξι', 'δεκαεπτά', 'δεκαοκτώ', 'δεκαεννέα']
-hundreds = ['', 'εκατόν', 'διακόσια', 'τριακόσια', 'τετρακόσια',
-            'πεντακόσια', 'εξακόσια', 'επτακόσια', 'οκτακόσια', 'εννιακόσια']
-thousands_sing = ['', 'χίλια', 'εκατομμύριο']
-thousands_plur = ['', 'χιλιάδες', 'εκατομμύρια']
+units = ["", "ένα", "δύο", "τρία", "τέσσερα", "πέντε", "έξι", "επτά", "οκτώ", "εννέα"]
+tens = [
+    "",
+    "δέκα",
+    "είκοσι",
+    "τριάντα",
+    "σαράντα",
+    "πενήντα",
+    "εξήντα",
+    "εβδομήντα",
+    "ογδόντα",
+    "ενενήντα",
+]
+teens = [
+    "",
+    "έντεκα",
+    "δώδεκα",
+    "δεκατρία",
+    "δεκατέσσερα",
+    "δεκαπέντε",
+    "δεκαέξι",
+    "δεκαεπτά",
+    "δεκαοκτώ",
+    "δεκαεννέα",
+]
+hundreds = [
+    "",
+    "εκατόν",
+    "διακόσια",
+    "τριακόσια",
+    "τετρακόσια",
+    "πεντακόσια",
+    "εξακόσια",
+    "επτακόσια",
+    "οκτακόσια",
+    "εννιακόσια",
+]
+thousands_sing = ["", "χίλια", "εκατομμύριο"]
+thousands_plur = ["", "χιλιάδες", "εκατομμύρια"]
 
 
 def num2word(n: int):
     if n == 0:
-        return 'μηδέν'
+        return "μηδέν"
 
     if n < 0:
-        return 'μείον ' + num2word(-n)
+        return "μείον " + num2word(-n)
 
     words = []
     groups_count = 0
@@ -28,12 +57,12 @@ def num2word(n: int):
 
         if group_words:
             term = thousands_sing[groups_count] if group == 1 else thousands_plur[groups_count]
-            words.append(group_words + ' ' + term)
+            words.append(group_words + " " + term)
 
         n //= 1000
         groups_count += 1
 
-    out = ' '.join(reversed(words))
+    out = " ".join(reversed(words))
     # Temporary fix
     out = out.replace("ένα χίλια", "χίλια")
 
@@ -42,7 +71,7 @@ def num2word(n: int):
 
 def process_group(group: int):
     if group == 0:
-        return ''
+        return ""
 
     group_words = []
     hundreds_digit = group // 100
@@ -67,4 +96,4 @@ def process_group(group: int):
     elif units_digit > 0:
         group_words.append(units[units_digit])
 
-    return ' '.join(group_words)
+    return " ".join(group_words)

@@ -47,9 +47,7 @@ async def self(interaction: discord.Interaction):
 
 @tree.command(name="wotden", description="Prompts a random english word from Wordref")
 async def self(interaction: discord.Interaction):
-    await interaction.response.send_message(
-        embed=Wordref(word=None, GrEn=False).embed()
-    )
+    await interaction.response.send_message(embed=Wordref(word=None, GrEn=False).embed())
 
 
 @tree.command(name="searchgr", description="Searches the given greek word in Wordref")
@@ -59,9 +57,7 @@ async def self(interaction: discord.Interaction, word: str):
 
 @tree.command(name="searchen", description="Searches the given english word in Wordref")
 async def self(interaction: discord.Interaction, word: str):
-    await interaction.response.send_message(
-        embed=Wordref(word=word, GrEn=False).embed()
-    )
+    await interaction.response.send_message(embed=Wordref(word=word, GrEn=False).embed())
 
 
 @tree.command(name="helprafa", description="Explains rafabot")
