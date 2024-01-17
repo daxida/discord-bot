@@ -1,62 +1,94 @@
 import discord
-from wordref.longest import highlightSynonyms
+from wordref.longest import highlight_synonyms
 import urllib
+
+TAG = "\033[35mENTRY:  \033[0m"
 
 
 class Entry:
-    def __init__(self, link: str, gr_word: str, GrEn: bool, is_random: bool):
+    """Container class where the suitability logic and formatting is done."""
+
+    def __init__(
+        self,
+        link: str,
+        gr_word: str,
+        gr_en: bool,
+        hide_words: bool,
+        min_sentences_shown: int,
+        max_sentences_shown: int,
+        is_random: bool,
+    ):
         self.link = link
         self.gr_word = gr_word
-        self.GrEn = GrEn
+        self.gr_en = gr_en
+        self.hide_words = hide_words
+        self.min_sentences_shown = min_sentences_shown
+        self.max_sentences_shown = max_sentences_shown
         self.is_random = is_random
 
         self.en_word = None
         self.gr_synonyms = set()
         self.en_synonyms = set()
         self.sentences = set()
-        self.POS = ""  # Parts of speech
-        self.is_good_entry = False
+        self.gr_pos = None  # Parts of speech
 
-    def diagnostic(self) -> None:
+        self.embed = False
+
+    @property
+    def is_valid_entry(self) -> bool:
+        word = self.gr_word
+
         if not self.link:
-            print(f"Exiting, couldn't find the link.")
-            return
+            print(f"{TAG} exit, couldn't find the link for {word}.")
+            return False
         if not self.gr_word:
-            print(f"Exiting, couldn't find the greek word.")
-            return
+            print(f"{TAG} exit, couldn't find the greek word for {word}.")
+            return False
         if not self.en_word:
-            print(f"Exiting, couldn't find the english word.")
-            return
+            print(f"{TAG} exit, couldn't find the english word for {word}.")
+            return False
         if not self.gr_synonyms:
-            print(f"Exiting, couldn't find a greek synonym.")
-            return
+            print(f"{TAG} exit, couldn't find a greek synonym for {word}.")
+            return False
         if not self.en_synonyms:
-            print(f"Exiting, couldn't find an english synonym.")
-            return
-        if not self.sentences:
-            print(f"Exiting, couldn't find any sentence.")
-            return
-        if not self.POS:
-            print(f"Couldn't find POS.")
+            print(f"{TAG} exit, couldn't find an english synonym for {word}.")
+            return False
+        if not len(self.sentences) >= self.min_sentences_shown:
+            print(f"{TAG} exit, couldn't find enough sentences ({self.min_sentences_shown}) for {word}.")
+            return False
 
-        self.is_good_entry = True
+        if not self.gr_pos:
+            print(f"{TAG} warn, couldn't find POS for {word}.")
 
-    def sort_by_contains_word(self) -> None:
+        return True
+
+    @property
+    def is_valid_embed(self) -> bool:
+        assert self.embed
+
+        # To prevent Discord message length error:
+        # HTTPException: 400 Bad Request (error code: 40060)
+        if len(self.embed) >= 2000:
+            return False
+
+        return True
+
+    def sort_sentences_by_contains_word(self) -> None:
         self.sentences = list(self.sentences)
-        if self.GrEn:
+        if self.gr_en:
             self.sentences.sort(key=lambda pair: self.gr_word in pair[0], reverse=True)
         else:
             self.sentences.sort(key=lambda pair: self.en_word in pair[0], reverse=True)
 
-    def debug(self, sentences_shown=10) -> None:
+    def debug(self) -> None:
         """Stringifies the entry in a debug format"""
 
         print()
         print("#" * 70)
 
         # Some sortings for easier reading (CARE IT CHANGES THE SET TO LIST).
-        self.gr_synonyms = sorted(self.gr_synonyms)
-        self.en_synonyms = sorted(self.en_synonyms)
+        sorted_gr_synonyms = sorted(self.gr_synonyms)
+        sorted_en_synonyms = sorted(self.en_synonyms)
         self.sentences = sorted(self.sentences)
 
         msg = "\n"
@@ -64,63 +96,108 @@ class Entry:
         msg += "\n"
         msg += f"Greek word: --------- {self.gr_word}\n"
         msg += f"English word: ------- {self.en_word}\n"
-        msg += f"POS: ---------------- {self.POS}\n"
+        msg += f"POS: ---------------- {self.gr_pos}\n"
         msg += "\n"
-        msg += f"Greek synonyms: ----- {self.gr_synonyms}\n"
-        msg += f"English synonyms: --- {self.en_synonyms}\n"
+        msg += f"Greek synonyms: ----- {sorted_gr_synonyms}\n"
+        msg += f"English synonyms: --- {sorted_en_synonyms}\n"
         msg += "\n"
-        for idx, (gsen, esen) in enumerate(list(self.sentences)[0:sentences_shown]):
-            msg += f"> {idx + 1}. {gsen}\n"
-            msg += f"> {idx + 1}. {highlightSynonyms(gsen, self.gr_synonyms)}\n"
-            msg += f"> {idx + 1}. {esen}\n"
-            msg += f"> {idx + 1}. {highlightSynonyms(esen, self.en_synonyms)}\n"
+        for idx, (gsen, esen) in enumerate(self.sentences):
+            if idx >= self.max_sentences_shown:
+                break
+            msg += f"> {idx + 1}: {gsen}\n"
+            msg += f"> {idx + 1}: {highlight_synonyms(gsen, self.gr_synonyms)}\n"
+            msg += f"> {idx + 1}: {esen}\n"
+            msg += f"> {idx + 1}: {highlight_synonyms(esen, self.en_synonyms)}\n"
 
-        print(msg)
+        print(f"\033[33m{msg}\033[0m")
 
-        # OPENS THE LINK IN A NEW TAB
-        # open_website = input('Type 1 to open the webpage\n')
-        open_website = "1"
-        if open_website == "1":
-            tmp = self.link.replace("https://", "")
-            encoded_url = urllib.parse.quote(f"{tmp}")
+        # Open the link in a new tab
+        open_website = False
+        if open_website:
+            clean_link = self.link.replace("https://", "")
+            encoded_url = urllib.parse.quote(f"{clean_link}")
             # webbrowser.open_new(f"https://{encoded_url}")
             print(f"https://{encoded_url}")
 
-    def to_embed(self, sentences_shown=10) -> discord.Embed:
+    def add_embed(
+        self,
+        show_pos=True,
+        show_translations=True,
+        show_synonyms=False,
+        show_sentences=True,
+        show_footer=True,
+    ) -> discord.Embed:
         """
         Turns the entry into a Discord embed.
         https://plainenglish.io/blog/send-an-embed-with-a-discord-bot-in-python
+
+        Stores it to self.embed to avoid repeated calls.
         """
 
-        title = "∙∙∙∙∙ "
-        if not self.GrEn:
-            self.POS = None
+        # self.debug()
+
+        if self.gr_en:
+            pos = f" - *{self.gr_pos}*" if self.gr_pos else ""
+        else:
+            # Swap gr and en
             self.gr_word, self.en_word = self.en_word, self.gr_word
             self.sentences = [(esen, gsen) for gsen, esen in self.sentences]
-        self.sort_by_contains_word()
+            pos = ""
 
-        tail_POS = f" - *{self.POS}*" if self.POS else ""
-        title += f"{self.gr_word}{tail_POS} ∙∙∙∙∙"
+        if not show_pos:
+            pos = ""
+
+        # title
+        title = f"∙∙∙∙∙ {self.gr_word}{pos} ∙∙∙∙∙"
 
         # descprition formatting
-        desc = ""
-        desc += f"**Translations:** ||{self.en_word}||\n"
-        desc += "**Sentences:**\n"
-        for idx, (gsen, esen) in enumerate(list(self.sentences)[0:sentences_shown]):
-            desc += f"> {idx + 1}. {highlightSynonyms(gsen, self.gr_synonyms)}\n"
-            desc += f"> {idx + 1}. ||{highlightSynonyms(esen, self.en_synonyms)}||\n"
+        sep = "||" if self.hide_words else ""
 
-        footer = ""
-        footer += f"Did you know the answer?"  # 🇾es or 🇳o?"
+        ## translations
+        translations = f"**Translations:** {sep}{self.en_word}{sep}\n"
+
+        ## synonyms (Wordreference structure for this is irregular.)
+        amount_synonyms_shown = 2
+        synonyms_lst = list(self.gr_synonyms - {self.gr_word})
+        # Prefer synonyms witn no spaces
+        synonyms_lst.sort(key=lambda s: " " in s)
+        synonyms_lst = synonyms_lst[:amount_synonyms_shown]
+        synonyms_str = ", ".join(synonyms_lst)
+        synonyms = "**Synonyms: **"
+        synonyms += f"{sep}{synonyms_str}{sep}\n"
+
+        ## sentences
+        self.sort_sentences_by_contains_word()
+        sentences = "**Sentences:**\n"
+        # We can't write "> {idx}." with a dot because Discord will overwrite the indexes.
+        for idx, (gsen, esen) in enumerate(self.sentences):
+            if idx >= self.max_sentences_shown:
+                break
+            sentences += f"> {idx + 1}: {highlight_synonyms(gsen, self.gr_synonyms)}\n"
+            sentences += f"> {idx + 1}: {sep}{highlight_synonyms(esen, self.en_synonyms)}{sep}\n"
+
+        description = ""
+        if show_translations:
+            description += translations
+        if show_synonyms and synonyms != "**Synonyms:**":
+            description += synonyms
+        if show_sentences and sentences != "**Sentences:**\n":
+            description += sentences
 
         embed = discord.Embed(
             title=title,
             url=f"{self.link}",
-            description=desc,
+            description=description,
             color=0xFF5733,
         )
 
-        # embed.set_thumbnail(url="https://i.imgur.com/axLm3p6.jpeg")
-        embed.set_footer(text=footer)
+        if show_footer:
+            # NOTE: add forvo here?
+            footer = ""
+            footer += f"https://forvo.com/word/{self.gr_word}/#el"
+            embed.set_footer(text=footer)
 
-        return embed
+        self.embed = embed
+
+    def __str__(self):
+        return str(vars(self)).replace(", ", "\n")

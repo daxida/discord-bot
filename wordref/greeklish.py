@@ -23,7 +23,7 @@ GREEKLISH = str.maketrans(
         "u": "υ",
         "v": "β",  # Similar to 'b'
         "w": "ω",
-        "x": "ξ",  # The Greek equivalent of 'x' is 'ξ'
+        "x": "χ",
         "y": "υ",
         "z": "ζ",  # The Greek equivalent of 'z' is 'ζ'
     }

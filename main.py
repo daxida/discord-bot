@@ -6,9 +6,6 @@ from wordref.wordref import Wordref
 from gr_datetime.gr_date import get_full_date
 
 
-config = dotenv_values(".env")
-
-
 class MyClient(discord.Client):
     def __init__(self, _intents):
         super().__init__(intents=_intents)
@@ -19,7 +16,7 @@ class MyClient(discord.Client):
         if not self.synced:
             await tree.sync()
             self.synced = True
-        print(f"Bot is ready! {self.user}")
+        print(f"\033[32mBot is ready! {self.user}\033[0m")
 
     async def on_message(self, message):
         if message.author == self.user:
@@ -32,32 +29,43 @@ client = MyClient(intents)
 tree = app_commands.CommandTree(client)
 
 
-async def template_command(interaction: discord.Interaction, word: str, GrEn: bool):
-    try:
-        wordref_embed = Wordref(word=word, GrEn=GrEn).embed()
-        await interaction.response.send_message(embed=wordref_embed)
-    except Exception as e:
-        await interaction.response.send_message(content=f"Error: {e}")
+async def template_command(
+    interaction: discord.Interaction,
+    word: str,
+    gr_en: bool,
+    hide_words: bool,
+    min_sentences_shown: int,
+    max_sentences_shown: int,
+):
+    wordref = Wordref(word, gr_en, hide_words, min_sentences_shown, max_sentences_shown)
+    wordref_embed = wordref.embed()
+    await interaction.response.send_message(embed=wordref_embed)
+    # try:
+    #     wordref = Wordref(word, gr_en, hide_words, amount_sentences_shown)
+    #     wordref_embed = wordref.embed()
+    #     await interaction.response.send_message(embed=wordref_embed)
+    # except Exception as e:
+    #     await interaction.response.send_message(content=f"Error: {e}")
 
 
 @tree.command(name="wotdgr", description="Prompts a random Greek word from Wordref")
 async def wotdgr(interaction: discord.Interaction):
-    await template_command(interaction, word=None, GrEn=True)
+    await template_command(interaction, None, True, True, 1, 3)
 
 
 @tree.command(name="wotden", description="Prompts a random english word from Wordref")
 async def wotden(interaction: discord.Interaction):
-    await template_command(interaction, word=None, GrEn=False)
+    await template_command(interaction, None, False, True, 1, 3)
 
 
-@tree.command(name="searchgr", description="Searches the given Greek word in Wordref")
+@tree.command(name="searchgr", description="Searches the given Greek word in Wordref (supports greeklish)")
 async def searchgr(interaction: discord.Interaction, word: str):
-    await template_command(interaction, word=word, GrEn=True)
+    await template_command(interaction, word, True, False, 0, 2)
 
 
 @tree.command(name="searchen", description="Searches the given english word in Wordref")
 async def searchen(interaction: discord.Interaction, word: str):
-    await template_command(interaction, word=word, GrEn=False)
+    await template_command(interaction, word, False, False, 0, 2)
 
 
 @tree.command(name="helprafa", description="Explains rafabot")
@@ -72,4 +80,5 @@ async def date(interaction: discord.Interaction):
 
 
 if __name__ == "__main__":
+    config = dotenv_values(".env")
     client.run(config["TOKEN"])

@@ -37,13 +37,13 @@ def get_delta(a, b):
     return (max_length - m) / max_length
 
 
-def highlightSynonyms(sentence, synonyms_list):
+def highlight_synonyms(sentence: str, synonyms: set) -> str:
     for word in set(sentence.split()):
         # Removes punctuation to match the correct words
         word = re.sub(r"\(|\)|,|\.|", "", word)  # add ; ??
-        for synonym in synonyms_list:
+        for reference in synonyms:
             # 1 = same word, 0 = completely different
-            dif = get_delta(word, synonym)
+            dif = get_delta(word, reference)
             # If the estimated difference is lower than 0.25
             # we treat both word as the same (declension, plural etc.)
             if dif <= 0.3:
