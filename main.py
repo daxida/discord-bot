@@ -1,9 +1,11 @@
 import discord
 from discord import app_commands
 from dotenv import dotenv_values
+
+import pronunciation.pronunciation as pronunciation
+from gr_datetime.gr_date import get_full_date
 from help.help import HelpMessage
 from wordref.wordref import Wordref
-from gr_datetime.gr_date import get_full_date
 
 
 class MyClient(discord.Client):
@@ -77,6 +79,16 @@ async def helprafa(interaction: discord.Interaction):
 @tree.command(name="date", description="Prompts date in Fidis format")
 async def date(interaction: discord.Interaction):
     await interaction.response.send_message(get_full_date())
+
+
+@tree.command(name="forvo", description="Returns a link with a forvo pronunciation")
+async def forvo(interaction: discord.Interaction, word: str):
+    message, audio_link, audio_file = pronunciation.get_pronunciation(word)
+    if audio_link is None:
+        await interaction.response.send_message(f"Could not find the word {word}!")
+        return
+    file = discord.File(audio_file, filename=f"{word}.mp3")
+    await interaction.response.send_message(file=file, content=message)
 
 
 if __name__ == "__main__":
