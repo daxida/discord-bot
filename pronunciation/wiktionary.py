@@ -12,4 +12,6 @@ def get_wiktionary_ipa(word: str) -> Tuple[str, Any | None]:
     soup = BeautifulSoup(response.text, "html.parser")
     # Account for the query word being written without accents by scraping the accented word.
     pronunciation = soup.find("a", {"title": "Παράρτημα:Προφορά/νέα ελληνικά"})
+    if pronunciation is None:
+        return link, None
     return link, pronunciation.text
