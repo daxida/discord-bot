@@ -1,6 +1,7 @@
 import datetime
-from gr_datetime.gr_numbers import num2word
 import re
+
+from gr_datetime.gr_numbers import num2word
 
 DAYS_NOMINATIVE = [
     "Δευτέρα",

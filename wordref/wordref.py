@@ -1,10 +1,11 @@
-import requests
 import re
-from wordref.entry import Entry
-from wordref.greeklish import greeklish_to_greek
-from bs4 import BeautifulSoup
 from typing import List
 
+import requests
+from bs4 import BeautifulSoup
+
+from wordref.entry import Entry
+from wordref.greeklish import greeklish_to_greek
 
 ATTRIBUTES_EL = {
     "επίθ": "adj",
