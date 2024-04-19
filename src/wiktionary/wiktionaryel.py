@@ -17,7 +17,7 @@ ENTRIES = [
     "Προφορά", "Προφορά_1", "Προφορά_2",
     "Επιφώνημα", "Εκφράσεις",
     "Ουσιαστικό", "Επίθετο", "Επίρρημα", "Μεταφράσεις",
-    "Συγγενικά", "Συνώνυμα", "Αντώνυμα", "Σύνθετα", "Δείτε_επίσης",
+    "Συγγενικά", "Συνώνυμα", "Αντώνυμα", "Σύνθετα",
     "Κλιτικός_τύπος_επιθέτου", "Κλιτικός_τύπος_ουσιαστικού",
     "Πολυλεκτικοί_όροι", "Σημειώσεις"
 ]
@@ -32,7 +32,9 @@ def test_fetch():
     print(j)
 
 
-def fetch_wiktionary(word: str, blacklist: List[str] = [], whitelist: List[str] = []) -> Dict[str, List[str]]:
+def fetch_wiktionary(
+    word: str, language: str, blacklist: List[str] = [], whitelist: List[str] = []
+) -> Dict[str, List[str]]:
     page = requests.get(URL.format(word))
     soup = BeautifulSoup(page.content, "html.parser")
 
@@ -41,8 +43,11 @@ def fetch_wiktionary(word: str, blacklist: List[str] = [], whitelist: List[str] 
     entries = ENTRIES[:]
     if whitelist:
         entries = whitelist
-    for entry in blacklist:
-        entries.remove(entry)
+
+    if blacklist:
+        for entry in blacklist:
+            if entry in entries:
+                entries.remove(entry)
 
     parts_of_speech = dict()
     for entry in entries:

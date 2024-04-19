@@ -6,6 +6,7 @@ import pronunciation.pronunciation as pronunciation
 from gr_datetime.gr_date import get_full_date
 from help.help import HelpMessage
 from wordref.wordref import Wordref
+from wiktionary.embed_message import embed_message
 
 
 class MyClient(discord.Client):
@@ -50,7 +51,32 @@ async def template_command(
     #     await interaction.response.send_message(content=f"Error: {e}")
 
 
-@tree.command(name="wotdgr", description="Prompts a random Greek word from Wordref")
+@tree.command(name="wiktionary", description="Return the Wiktionary entry for a word")
+async def wiktionary(
+    interaction: discord.Interaction,
+    word: str,
+    language: str = "greek",
+    blacklist: str = None,
+    whitelist: str = None,
+    ephemeral: str = "True",
+):
+    if blacklist:
+        blacklist = blacklist.split(",")
+    if whitelist:
+        whitelist = [x.strip().capitalize() for x in whitelist.split(",")]
+    # make message visible to others
+    if ephemeral.lower() in ["false", "no"]:
+        ephemeral = False
+    else:
+        ephemeral = True
+    await interaction.response.send_message(
+        embed=embed_message(word, language, blacklist, whitelist), ephemeral=ephemeral
+    )
+
+
+@tree.command(
+    name="wotdgr", description="Prompts a random Greek word from Wordref (default language is Greek)"
+)
 async def wotdgr(interaction: discord.Interaction):
     await template_command(interaction, None, True, True, 1, 3)
 
