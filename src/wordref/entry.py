@@ -5,6 +5,7 @@ import discord
 from wordref.longest import highlight_synonyms
 
 TAG = "\033[35mENTRY:  \033[0m"
+EXIT = "\033[31m[EXIT]\033[0m"
 
 
 class Entry:
@@ -34,33 +35,33 @@ class Entry:
         self.sentences = set()
         self.gr_pos = None  # Parts of speech
 
-        self.embed = False
+        self.embed = None
 
     @property
     def is_valid_entry(self) -> bool:
         word = self.gr_word
 
         if not self.link:
-            print(f"{TAG} exit, couldn't find the link for {word}.")
+            print(f"{TAG} {EXIT}, couldn't find the link for {word}.")
             return False
         if not self.gr_word:
-            print(f"{TAG} exit, couldn't find the greek word for {word}.")
+            print(f"{TAG} {EXIT}, couldn't find the greek word for {word}.")
             return False
         if not self.en_word:
-            print(f"{TAG} exit, couldn't find the english word for {word}.")
+            print(f"{TAG} {EXIT}, couldn't find the english word for {word}.")
             return False
         if not self.gr_synonyms:
-            print(f"{TAG} exit, couldn't find a greek synonym for {word}.")
+            print(f"{TAG} {EXIT}, couldn't find a greek synonym for {word}.")
             return False
         if not self.en_synonyms:
-            print(f"{TAG} exit, couldn't find an english synonym for {word}.")
+            print(f"{TAG} {EXIT}, couldn't find an english synonym for {word}.")
             return False
         if not len(self.sentences) >= self.min_sentences_shown:
-            print(f"{TAG} exit, couldn't find enough sentences ({self.min_sentences_shown}) for {word}.")
+            print(f"{TAG} {EXIT}, couldn't find enough sentences ({self.min_sentences_shown}) for {word}.")
             return False
 
         if not self.gr_pos:
-            print(f"{TAG} warn, couldn't find POS for {word}.")
+            print(f"{TAG} [WARN], couldn't find POS for {word}.")
 
         return True
 

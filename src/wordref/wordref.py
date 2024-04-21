@@ -1,11 +1,12 @@
 import re
-from typing import List
+from typing import List, Any
 
 import requests
 from bs4 import BeautifulSoup
 
 from wordref.entry import Entry
 from wordref.greeklish import greeklish_to_greek
+from discord import Embed
 
 ATTRIBUTES_EL = {
     "επίθ": "adj",
@@ -33,6 +34,7 @@ ATTRIBUTES_EN = {
     "vtr",
 }
 TAG = "\033[33mWORDREF:\033[0m"
+OK = "\033[32m[OK]\033[0m"
 
 
 def is_english(word: str) -> bool:
@@ -70,58 +72,75 @@ class Wordref:
     wordref_url = "https://www.wordreference.com"
 
     def __init__(
-        self, word: str, gr_en: bool, hide_words: bool, min_sentences_shown: int, max_sentences_shown: int
-    ):
+        self,
+        word: str | None,
+        gr_en: bool,
+        hide_words: bool,
+        min_sentences_shown: int,
+        max_sentences_shown: int,
+    ) -> None:
+        # NOTE: The discord API already strips the given "word".
         self.word = word
+        self.is_random = word is None
+
+        is_greeklish = gr_en and word is not None and is_english(word)
+        # Rewrite the "word" using greek letters: xara => χαρα
+        # NOTE: At this point, the "word" has no accents (but will have when updated).
+        if is_greeklish:
+            self.word = greeklish_to_greek(word)
+
+        if self.is_random:
+            extension = "random/gren"
+        elif is_english(self.word):
+            extension = f"engr/{self.word}"
+        else:
+            extension = f"gren/{self.word}"
+
+        self.url = f"{Wordref.wordref_url}/{extension}"
+
         self.gr_en = gr_en
         self.hide_words = hide_words
         self.min_sentences_shown = min_sentences_shown
         self.max_sentences_shown = max_sentences_shown
 
-        self.is_random = word is None
-
-        # Support greeklish (try fetching the greekified word)
-        if gr_en and word and is_english(word):
-            self.word = greeklish_to_greek(word)
+        self.max_random_iterations = 5
 
     def debug(self) -> None:
         entry = self.fetch_entry()
         return entry.debug(self.amount_sentences_shown)
 
-    def embed(self):
-        max_iterations = 5
-        for _ in range(max_iterations):
-            entry = self.fetch_entry()
-            entry.add_embed()
+    def fetch_embed(self) -> Embed | None:
+        if not self.is_random:
+            embed = self.try_fetch_embed()
+        else:
+            embed = None
+            for _ in range(self.max_random_iterations):
+                embed = self.try_fetch_embed()
+                if embed is not None:
+                    break
 
-            if entry.is_valid_embed:
-                print(f"{TAG} found a valid embed for {self.word}")
-                return entry.embed
+        return embed
 
-        raise Exception(f"Couldn't fetch an embed in {max_iterations} tries")
+    def try_fetch_embed(self) -> Embed | None:
+        entry = self.try_fetch_entry()
 
-    def fetch_entry(self) -> Entry:
-        max_iterations = 5
-        for _ in range(max_iterations):
-            entry = self.try_fetch_entry()
+        if not entry.is_valid_entry:
+            return None
 
-            if entry.is_valid_entry:
-                return entry
+        print(f"{TAG} {OK} found a valid entry for {self.word=}.")
+        entry.add_embed()
 
-        raise Exception(f"Couldn't fetch an entry in {max_iterations} tries")
+        if not entry.is_valid_embed:
+            return None
+
+        print(f"{TAG} {OK} found a valid embed for {self.word=}.")
+        return entry.embed
 
     def try_fetch_entry(self) -> Entry:
-        if self.is_random:
-            extension = "random/gren"
-        else:
-            self.word = self.word.strip()
-            extension = f"{'engr' if is_english(self.word) else 'gren'}/{self.word}"
-
-        url = f"{Wordref.wordref_url}/{extension}"
-
-        response = requests.get(url)
+        response = requests.get(self.url)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
+
         # Account for the query word being written without accents by scraping the accented word.
         self.word = (
             soup.find("table", {"class": "WRD"})
@@ -129,7 +148,8 @@ class Wordref:
             .find("td", {"class": "FrWrd"})
             .strong.text.split()[0]
         )
-        link = f"{Wordref.wordref_url}/gren/{self.word}"
+
+        link = f"{Wordref.wordref_url}/gren/{self.word}"  # Forced "gren"
 
         entry = Entry(
             link,
@@ -141,17 +161,17 @@ class Wordref:
             self.is_random,
         )
 
-        print(f"{TAG} requesting {url}")
-        print(f"{TAG} trying to fetch '{self.word}' ({link})")
+        print(f"{TAG} requesting {self.url}")
+        print(f"{TAG} trying to fetch '{self.word=}' ({link})")
         print(f"{TAG}\n{entry}")
 
         for res in soup.find_all("table", {"class": "WRD"}):
             self.try_fetch_word(res, entry)
-            self.try_fetch_sentences(res, entry)
+            self.try_fetch_sentence_pairs(res, entry)
 
         return entry
 
-    def try_fetch_word(self, res, entry: Entry):
+    def try_fetch_word(self, res: Any, entry: Entry) -> None:
         for item in res.find_all("tr", {"class": ["even", "odd"]}):
             FrWrd = item.find("td", {"class": "FrWrd"})
             ToWrd = item.find("td", {"class": "ToWrd"})
@@ -181,16 +201,18 @@ class Wordref:
             for word in parse_words(en_text):
                 entry.en_synonyms.add(word)
 
-    def try_fetch_sentences(self, res, entry: Entry):
-        # Options:
-        # 1 -> Stores every pair (even when there are
-        #      two translations to a sentence)
-        # Ex.
-        # (EN) The supposed masterpiece discovered in the old house was a fake.
-        # (T1) Το υποτιθέμενο έργο τέχνης που βρέθηκε στο παλιό σπίτι ήταν πλαστό.
-        # (T2) Το δήθεν έργο τέχνης που βρέθηκε στο παλιό σπίτι ήταν πλαστό.
+    def try_fetch_sentence_pairs(self, res: Any, entry: Entry) -> None:
+        """
+        Options:
+        - (1) Stores every pair (even when there are
+             two translations to a sentence)
+        Ex.
+        (EN) The supposed masterpiece discovered in the old house was a fake.
+        (T1) Το υποτιθέμενο έργο τέχνης που βρέθηκε στο παλιό σπίτι ήταν πλαστό.
+        (T2) Το δήθεν έργο τέχνης που βρέθηκε στο παλιό σπίτι ήταν πλαστό.
 
-        # 2 -> Store only one pair giving priority to containing the original word.
+        - (2) Store only one pair giving priority to containing the original word.
+        """
 
         gr_sentence = ""
         en_sentence = ""

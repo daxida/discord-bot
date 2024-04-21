@@ -33,15 +33,18 @@ tree = app_commands.CommandTree(client)
 
 async def template_command(
     interaction: discord.Interaction,
-    word: str,
+    word: str | None,
     gr_en: bool,
     hide_words: bool,
     min_sentences_shown: int,
     max_sentences_shown: int,
 ):
     wordref = Wordref(word, gr_en, hide_words, min_sentences_shown, max_sentences_shown)
-    wordref_embed = wordref.embed()
-    await interaction.response.send_message(embed=wordref_embed)
+    wordref_embed = wordref.fetch_embed()
+    if wordref_embed is None:
+        await interaction.response.send_message("The command did not succeed.")
+    else:
+        await interaction.response.send_message(embed=wordref_embed)
     # try:
     #     wordref = Wordref(word, gr_en, hide_words, amount_sentences_shown)
     #     wordref_embed = wordref.embed()
