@@ -93,6 +93,9 @@ async def date(interaction: discord.Interaction):
 
 @tree.command(name="forvo", description="Returns a link with a forvo pronunciation")
 async def forvo(interaction: discord.Interaction, word: str):
+    if is_english(word):
+        word = greeklish_to_greek(word)
+
     message, audio_link, audio_file = pronunciation.get_pronunciation(word)
     if audio_link is None:
         await interaction.response.send_message(f"Could not find the word {word}!")
