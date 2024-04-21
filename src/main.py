@@ -1,10 +1,10 @@
 import discord
+import pronunciation.pronunciation as pronunciation
 from discord import app_commands
 from dotenv import dotenv_values
-
-import pronunciation.pronunciation as pronunciation
 from gr_datetime.gr_date import get_full_date
 from help.help import HelpMessage
+from utils import greeklish_to_greek, is_english
 from wordref.wordref import Wordref
 
 
@@ -39,6 +39,13 @@ async def template_command(
     min_sentences_shown: int,
     max_sentences_shown: int,
 ):
+    # Convert greeklish to greek if necessary
+    is_greeklish = gr_en and word is not None and is_english(word)
+    if is_greeklish:
+        original_word = word
+        word = greeklish_to_greek(word)
+        print(f"(GREEKLISH) Converted {original_word=} to {word=}")
+
     wordref = Wordref(word, gr_en, hide_words, min_sentences_shown, max_sentences_shown)
     wordref_embed = wordref.fetch_embed()
     if wordref_embed is None:

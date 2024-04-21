@@ -1,12 +1,11 @@
 import re
-from typing import List, Any
+from typing import Any, List
 
 import requests
 from bs4 import BeautifulSoup
-
-from wordref.entry import Entry
-from wordref.greeklish import greeklish_to_greek
 from discord import Embed
+from utils import is_english
+from wordref.entry import Entry
 
 ATTRIBUTES_EL = {
     "επίθ": "adj",
@@ -35,10 +34,6 @@ ATTRIBUTES_EN = {
 }
 TAG = "\033[33mWORDREF:\033[0m"
 OK = "\033[32m[OK]\033[0m"
-
-
-def is_english(word: str) -> bool:
-    return all(ord(ch) < 200 for ch in word)
 
 
 def parse_words(text: str) -> List[str]:
@@ -82,12 +77,6 @@ class Wordref:
         # NOTE: The discord API already strips the given "word".
         self.word = word
         self.is_random = word is None
-
-        is_greeklish = gr_en and word is not None and is_english(word)
-        # Rewrite the "word" using greek letters: xara => χαρα
-        # NOTE: At this point, the "word" has no accents (but will have when updated).
-        if is_greeklish:
-            self.word = greeklish_to_greek(word)
 
         if self.is_random:
             extension = "random/gren"
@@ -142,12 +131,15 @@ class Wordref:
         soup = BeautifulSoup(response.text, "html.parser")
 
         # Account for the query word being written without accents by scraping the accented word.
-        self.word = (
-            soup.find("table", {"class": "WRD"})
-            .find("tr", {"class": "even"})
-            .find("td", {"class": "FrWrd"})
-            .strong.text.split()[0]
-        )
+        try:
+            self.word = (
+                soup.find("table", {"class": "WRD"})
+                .find("tr", {"class": "even"})
+                .find("td", {"class": "FrWrd"})
+                .strong.text.split()[0]
+            )
+        except:
+            pass
 
         link = f"{Wordref.wordref_url}/gren/{self.word}"  # Forced "gren"
 
