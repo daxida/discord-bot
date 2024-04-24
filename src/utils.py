@@ -41,16 +41,17 @@ def greeklish_to_greek_characters(word: str) -> str:
     return word.lower().translate(GREEKLISH)
 
 
-def greeklish_to_greek(word: str) -> str:
+def fix_greek_spelling(word: str) -> str:
     """
     Snippet from the wordref script that requests WordReference to get
-    the greek accented version of the given word.
+    the greek accented version of a given word (which can be greeklish 
+    or a non-accented greek word).
 
     Examples:
-        * greeklish_to_greek("xara")     => χαρά
-        * greeklish_to_greek("χαρα")     => χαρά
-        * greeklish_to_greek("χαρά")     => χαρά
-        * greeklish_to_greek("nonsense") => nonsense
+        * fix_greek_spelling("xara")     => χαρά
+        * fix_greek_spelling("χαρα")     => χαρά
+        * fix_greek_spelling("χαρά")     => χαρά
+        * fix_greek_spelling("nonsense") => nonsense
     """
 
     greek_word_no_accents = greeklish_to_greek_characters(word)

@@ -4,7 +4,7 @@ from discord import app_commands
 from dotenv import dotenv_values
 from gr_datetime.gr_date import get_full_date
 from help.help import HelpMessage
-from utils import greeklish_to_greek, is_english
+from utils import fix_greek_spelling
 from wordref.wordref import Wordref
 
 
@@ -39,12 +39,10 @@ async def template_command(
     min_sentences_shown: int,
     max_sentences_shown: int,
 ):
-    # Convert greeklish to greek if necessary
-    is_greeklish = gr_en and word is not None and is_english(word)
-    if is_greeklish:
+    if word is not None:
         original_word = word
-        word = greeklish_to_greek(word)
-        print(f"(GREEKLISH) Converted {original_word=} to {word=}")
+        word = fix_greek_spelling(word)
+        print(f"Converted {original_word=} to {word=}")
 
     wordref = Wordref(word, gr_en, hide_words, min_sentences_shown, max_sentences_shown)
     wordref_embed = wordref.fetch_embed()
@@ -93,8 +91,7 @@ async def date(interaction: discord.Interaction):
 
 @tree.command(name="forvo", description="Returns a link with a forvo pronunciation")
 async def forvo(interaction: discord.Interaction, word: str):
-    if is_english(word):
-        word = greeklish_to_greek(word)
+    word = fix_greek_spelling(word)
 
     message, audio_link, audio_file = pronunciation.get_pronunciation(word)
     if audio_link is None:
