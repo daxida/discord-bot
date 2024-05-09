@@ -70,4 +70,8 @@ def fix_greek_spelling(word: str) -> str:
     except:
         pass
 
+    # We have to trim in case of multiple comma separated words. For example:
+    # "https://www.wordreference.com/gren/αγαπώ" returns "αγαπάω," (from αγαπάω, αγαπώ)
+    word = word.strip(",")
+
     return word
