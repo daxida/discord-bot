@@ -44,7 +44,7 @@ def greeklish_to_greek_characters(word: str) -> str:
 def fix_greek_spelling(word: str) -> str:
     """
     Snippet from the wordref script that requests WordReference to get
-    the greek accented version of a given word (which can be greeklish 
+    the greek accented version of a given word (which can be greeklish
     or a non-accented greek word).
 
     Examples:
