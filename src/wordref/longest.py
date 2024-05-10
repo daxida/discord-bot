@@ -1,8 +1,9 @@
 import re
 import unicodedata
+from typing import Set
 
 
-def LCS(a, b):
+def LCS(a: str, b: str) -> int:
     """Finds the longuest common substring of a and b"""
     if a == b:
         return len(a)
@@ -22,14 +23,22 @@ def LCS(a, b):
     return var
 
 
-def remove_accents(word):
-    normalized = unicodedata.normalize("NFKD", word)
+def normalize_greek_word(word: str) -> str:
+    """
+    Return a greek word without accents in lowercase.
+    ["Άλφα", "Αλφα", "άλφα", "αλφα"] are all converted into "αλφα".
+
+    >>> words = ["Άλφα", "Αλφα", "άλφα", "αλφα"]
+    >>> normalized_words = [normalize_greek_word(w) for w in words]
+    >>> assert len(set(normalized_words)) == 1
+    """
+    normalized = unicodedata.normalize("NFKD", word).casefold()
     return "".join(c for c in normalized if not unicodedata.combining(c))
 
 
-def get_delta(a, b):
-    aa = remove_accents(a.lower())
-    bb = remove_accents(b.lower())
+def get_delta(a: str, b: str) -> float:
+    aa = normalize_greek_word(a)
+    bb = normalize_greek_word(b)
 
     max_length = max(len(aa), len(bb))
     m = max(LCS(aa, bb), LCS(bb, aa))
@@ -37,7 +46,7 @@ def get_delta(a, b):
     return (max_length - m) / max_length
 
 
-def highlight_synonyms(sentence: str, synonyms: set) -> str:
+def highlight_synonyms(sentence: str, synonyms: Set[str]) -> str:
     for word in set(sentence.split()):
         # Removes punctuation to match the correct words
         word = re.sub(r"\(|\)|,|\.|", "", word)  # add ; ??
@@ -51,3 +60,11 @@ def highlight_synonyms(sentence: str, synonyms: set) -> str:
                 break
 
     return sentence
+
+
+if __name__ == "__main__":
+    import itertools
+
+    words = ["Άλφα", "Αλφα", "άλφα", "αλφα"]
+    for w1, w2 in itertools.combinations(words, 2):
+        assert get_delta(w1, w2) == 0
