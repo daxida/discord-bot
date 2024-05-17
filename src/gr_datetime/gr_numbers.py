@@ -41,14 +41,14 @@ thousands_sing = ["", "χίλια", "εκατομμύριο"]
 thousands_plur = ["", "χιλιάδες", "εκατομμύρια"]
 
 
-def num2word(n: int):
+def num2word(n: int) -> str:
     if n == 0:
         return "μηδέν"
 
     if n < 0:
-        return "μείον " + num2word(-n)
+        return f"μείον {num2word(-n)}"
 
-    words = []
+    words: list[str] = []
     groups_count = 0
 
     while n > 0:
@@ -57,7 +57,7 @@ def num2word(n: int):
 
         if group_words:
             term = thousands_sing[groups_count] if group == 1 else thousands_plur[groups_count]
-            words.append(group_words + " " + term)
+            words.append(f"{group_words} {term}")
 
         n //= 1000
         groups_count += 1
@@ -69,11 +69,11 @@ def num2word(n: int):
     return out.strip()
 
 
-def process_group(group: int):
+def process_group(group: int) -> str:
     if group == 0:
         return ""
 
-    group_words = []
+    group_words: list[str] = []
     hundreds_digit = group // 100
     tens_digit = (group % 100) // 10
     units_digit = group % 10
@@ -97,3 +97,8 @@ def process_group(group: int):
         group_words.append(units[units_digit])
 
     return " ".join(group_words)
+
+
+if __name__ == "__main__":
+    assert num2word(0) == "μηδέν"
+    assert num2word(1) == "ένα"
