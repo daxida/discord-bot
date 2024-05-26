@@ -4,7 +4,8 @@ from discord import app_commands
 from dotenv import dotenv_values
 from gr_datetime.gr_date import get_full_date
 from help.help import HelpMessage
-from utils import fix_greek_spelling
+from utils import Pagination, fix_greek_spelling
+from wordlookup.wiktionaryel import fetch_conjugation
 from wordref.wordref import Wordref
 
 
@@ -113,6 +114,37 @@ async def forvo(interaction: discord.Interaction, word: str):
     await interaction.response.send_message(file=file, content=message)
 
 
-if __name__ == "__main__":
+@tree.command(name="conj", description="Returns the present tense of the verb.")
+async def conj(interaction: discord.Interaction, word: str):
+    conjugation = await fetch_conjugation(word)
+    if not conjugation:
+        prev_word = word
+        word = fix_greek_spelling(word)
+        if prev_word != word:
+            conjugation = await fetch_conjugation(word)
+    if not conjugation:
+        await interaction.response.send_message(f"Could not find conjugation for {word}.")
+        return
+
+    url = f"https://el.wiktionary.org/wiki/{word}"
+    list_contents = list(conjugation.items())
+    n = len(list_contents)
+
+    async def get_page(page: int):
+        verb_tense, conjugation = list_contents[page - 1]
+        emb = discord.Embed(title=word, description=f"{verb_tense}\n\n{conjugation}\n")
+        emb.url = url
+        emb.set_author(name=f"Requested by {interaction.user}")
+        emb.set_footer(text=f"Page {page} from {n}")
+        return emb, n
+
+    await Pagination(interaction, get_page).navigate()
+
+
+def main() -> None:
     config = dotenv_values(".env")
     client.run(config["TOKEN"])
+
+
+if __name__ == "__main__":
+    main()
