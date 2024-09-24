@@ -8,7 +8,7 @@ discord
 discord.py
 frozenlist==1.4.1
 idna>=3.7
-multidict==6.1.0
+multidict
 python-dotenv==1.0.0
 requests==2.32.0
 soupsieve==2.5

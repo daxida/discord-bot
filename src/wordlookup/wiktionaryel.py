@@ -66,6 +66,7 @@ class WiktionaryQuery:
 
         soup = BeautifulSoup(page_content, "html.parser")
         WiktionaryQuery.remove_ancient_greek(soup, language)
+
         self.soup = soup
 
         return self
@@ -92,6 +93,14 @@ class WiktionaryQuery:
                 # remove the current element and move to next sibling
                 current_element.extract()
                 current_element = next_sibling
+    def remove_ancient_greek(soup: Any) -> None:
+        # find where the ancient greek section begins
+        tag_to_remove = soup.find("span", id="Αρχαία_ελληνικά_(grc)")
+        if tag_to_remove:
+            parent = tag_to_remove.find_parent()
+            # remove everything under ancient section (always below modern)
+            for sibling in parent.find_next_siblings():
+                sibling.extract()
 
 
 async def fetch_conjugation(word: str) -> dict[str, str] | None:
@@ -99,6 +108,7 @@ async def fetch_conjugation(word: str) -> dict[str, str] | None:
     Fetch the verb conjugation table from a word.
     Retry with word variations by parsing wiktionary.
     """
+
     query = await WiktionaryQuery.create(word, "greek")
     conjugation = await _fetch_conjugation(query)
     logger.info("Success." if conjugation else "Failure.")
@@ -374,7 +384,7 @@ def parse_entry(query: WiktionaryQuery, entry_type: str) -> list[str] | None:
     if not results:
         return None
 
-    entry_elements = []
+    entry_elements: list[str] = []
     # due to wiktionary formatting, finds body under the entry
     next_element = results.parent.find_next_sibling()
 
