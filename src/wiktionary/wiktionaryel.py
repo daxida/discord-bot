@@ -9,45 +9,49 @@ import requests
 from bs4 import BeautifulSoup
 from typing import List, Any, Dict
 
-URL = "https://el.wiktionary.org/wiki/{}?printable=yes"
-
 # fmt: off
 ENTRIES = [
     "Ετυμολογία", "Ετυμολογία_1", "Ετυμολογία_2", 
     "Προφορά", "Προφορά_1", "Προφορά_2",
-    "Επιφώνημα", "Εκφράσεις",
-    "Ουσιαστικό", "Επίθετο", "Επίρρημα", "Μεταφράσεις",
-    "Συγγενικά", "Συνώνυμα", "Αντώνυμα", "Σύνθετα",
+    "Επιφώνημα", "Έκφραση", "Ουσιαστικό", 
+    "Εκφράσεις", "Επίθετο", "Επίρρημα", "Συνώνυμα", "Αντώνυμα",
     "Κλιτικός_τύπος_επιθέτου", "Κλιτικός_τύπος_ουσιαστικού",
     "Πολυλεκτικοί_όροι", "Σημειώσεις"
+] # Μεταφράσεις, "Σύνθετα", "Συγγενικά" cut off here
+ENTRIES_EN = [
+    "Etymology", "Etymology_1", "Etymology_2",
+    "Pronunciation", "Pronunciation_2", "Pronunciation_3",
+    "Interjection", "Interjection_2", "Expression",
+    "Expression_2", "Expressions", "Noun", "Noun_2",
+    "Adjective", "Adjective_2", "Adverb", "Adverb_2",
+    "Related", "Synonyms", "Antonyms", "Synonyms_2", "Antonyms_2"
 ]
 # fmt: on
 
-
 def test_fetch():
     word = "καλημέρα"
-    res = fetch_wiktionary(word)
-
+    res = fetch_wiktionary(word, "greek")
     j = json.dumps(res, indent=2, ensure_ascii=False)
     print(j)
 
 
 def fetch_wiktionary(
-    word: str, language: str, blacklist: List[str] = [], whitelist: List[str] = []
-) -> Dict[str, List[str]]:
+    word: str, language: str
+    ) -> Dict[str, List[str]]:
+        
+    lang_str = "el"
+    URL = "https://el.wiktionary.org/wiki/{}?printable=yes"
+    if language == "english":
+        lang_str = "en"
+        URL = "https://en.wiktionary.org/wiki/{}?printable=yes"
+    
     page = requests.get(URL.format(word))
     soup = BeautifulSoup(page.content, "html.parser")
-
-    remove_ancient_greek(soup)
+    remove_ancient_greek(soup, language)
 
     entries = ENTRIES[:]
-    if whitelist:
-        entries = whitelist
-
-    if blacklist:
-        for entry in blacklist:
-            if entry in entries:
-                entries.remove(entry)
+    if language == "english":
+        entries = ENTRIES_EN[:]
 
     parts_of_speech = dict()
     for entry in entries:
@@ -60,7 +64,7 @@ def fetch_wiktionary(
 
 def fetch_entries(soup: Any, entry_type: str) -> List[str] | None:
     # find position of page element with desired type
-    results = soup.find("span", id=entry_type)
+    results = soup.find(["h3", "h4"], id=entry_type)
     if not results:
         return None
 
@@ -91,14 +95,27 @@ def fetch_entries(soup: Any, entry_type: str) -> List[str] | None:
     return entry_elements
 
 
-def remove_ancient_greek(soup: Any) -> None:
+def remove_ancient_greek(soup: Any, language: str) -> None:
     # find where the ancient greek section begins
-    tag_to_remove = soup.find("span", id="Αρχαία_ελληνικά_(grc)")
+    if language == "english":
+        remove_string = "Ancient_Greek"
+        stop_at_string = "Greek"
+    else:
+        remove_string = "Αρχαία_ελληνικά_(grc)"
+        stop_at_string = None
+        
+    tag_to_remove = soup.find("h2", id=remove_string)
+    
     if tag_to_remove:
-        parent = tag_to_remove.find_parent()
-        # remove everything under ancient section (always below modern)
-        for sibling in parent.find_next_siblings():
-            sibling.extract()
+        current_element = tag_to_remove.find_parent()
+        while current_element:
+            next_sibling = current_element.find_next_sibling()
+            if next_sibling and stop_at_string and next_sibling.find("h2", string=stop_at_string):
+                break
+            
+            # remove the current element and move to next sibling
+            current_element.extract()
+            current_element = next_sibling
 
 
 if __name__ == "__main__":

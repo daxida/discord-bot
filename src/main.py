@@ -1,12 +1,15 @@
 import discord
+import asyncio
+
 from discord import app_commands
 from dotenv import dotenv_values
 
+from help.help import HelpMessage
 import pronunciation.pronunciation as pronunciation
 from gr_datetime.gr_date import get_full_date
-from help.help import HelpMessage
 from wordref.wordref import Wordref
-from wiktionary.embed_message import embed_message
+from wiktionary.embed_message import embed_message as wiktionary_message
+from languagetransfer.embed_message import embed_message as languagetransfer_message
 
 
 class MyClient(discord.Client):
@@ -24,6 +27,16 @@ class MyClient(discord.Client):
     async def on_message(self, message):
         if message.author == self.user:
             return
+        
+        if message.content.startswith("rafasbot, "):
+            command = message.content[len("rafasbot, "):].strip()
+            await self.handle_command(message.channel, command)
+            
+    async def handle_command(self, channel, command):
+        if command in ["explain language transfer", "explain lt",
+        "what is language transfer", "what is lt"]:
+            embed = languagetransfer_message()
+            await channel.send(embed=embed)
 
 
 intents = discord.Intents.default()
@@ -51,27 +64,43 @@ async def template_command(
     #     await interaction.response.send_message(content=f"Error: {e}")
 
 
+# helper function for wiktionary stuff
+async def wiktionary_handler(
+    interaction: discord.Interaction,
+    word: str,
+    language: str,
+    ephemeral: str = "True",
+):
+    ephemeral = ephemeral.lower() in ["true", "yes", "1"]
+    embeds = wiktionary_message(word, language)
+
+    # send the response with the appropriate embed handling
+    if len(embeds) == 1:
+        await interaction.response.send_message(embed=embeds[0], ephemeral=ephemeral)
+    else:
+        await interaction.response.send_message(embed=embeds[0], ephemeral=ephemeral)
+        # send each subsequent embed as a follow up
+        for embed in embeds[1:]:
+            await interaction.followup.send(embed=embed, ephemeral=ephemeral)
+        
+# english wiktionary word return
 @tree.command(name="wiktionary", description="Return the Wiktionary entry for a word")
 async def wiktionary(
     interaction: discord.Interaction,
     word: str,
-    language: str = "greek",
-    blacklist: str = None,
-    whitelist: str = None,
     ephemeral: str = "True",
 ):
-    if blacklist:
-        blacklist = blacklist.split(",")
-    if whitelist:
-        whitelist = [x.strip().capitalize() for x in whitelist.split(",")]
-    # make message visible to others
-    if ephemeral.lower() in ["false", "no"]:
-        ephemeral = False
-    else:
-        ephemeral = True
-    await interaction.response.send_message(
-        embed=embed_message(word, language, blacklist, whitelist), ephemeral=ephemeral
-    )
+    await wiktionary_handler(interaction, word, language="english", ephemeral=ephemeral)
+
+# greek wiktionary word return
+@tree.command(name="wiktionarygr", description="Return the Wiktionary (Greek) entry for a word")
+async def wiktionarygr(
+    interaction: discord.Interaction,
+    word: str,
+    ephemeral: str = "True",
+):
+    await wiktionary_handler(interaction, word, language="greek", ephemeral=ephemeral)
+
 
 
 @tree.command(
@@ -115,7 +144,6 @@ async def forvo(interaction: discord.Interaction, word: str):
         return
     file = discord.File(audio_file, filename=f"{word}.mp3")
     await interaction.response.send_message(file=file, content=message)
-
 
 if __name__ == "__main__":
     config = dotenv_values(".env")
