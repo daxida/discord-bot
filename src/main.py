@@ -1,41 +1,49 @@
 import discord
-import asyncio
-
+import pronunciation.pronunciation as pronunciation
 from discord import app_commands
 from dotenv import dotenv_values
-
-from help.help import HelpMessage
-import pronunciation.pronunciation as pronunciation
 from gr_datetime.gr_date import get_full_date
+from help.help import HelpMessage
+from utils import Pagination, fix_greek_spelling
+from wordlookup.wiktionaryel import fetch_conjugation
+from wordlookup.wiktionaryel import fetch_wiktionary_pos
+from wordlookup.embed_message import embed_message as wiktionary_message
+from rafasfaq.lt_message import embed_message as lt_message
+from rafasfaq.faqlist_message import embed_message as faqlist_message
 from wordref.wordref import Wordref
-from wiktionary.embed_message import embed_message as wiktionary_message
-from languagetransfer.embed_message import embed_message as languagetransfer_message
-
 
 class MyClient(discord.Client):
-    def __init__(self, _intents):
+    def __init__(self, _intents: discord.Intents) -> None:
         super().__init__(intents=_intents)
         self.synced = False
 
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         await self.wait_until_ready()
         if not self.synced:
             await tree.sync()
             self.synced = True
         print(f"\033[32mBot is ready! {self.user}\033[0m")
 
-    async def on_message(self, message):
+    async def on_message(self, message: discord.Message) -> None:
         if message.author == self.user:
             return
         
-        if message.content.startswith("rafasbot, "):
-            command = message.content[len("rafasbot, "):].strip()
+        if message.content.startswith("rafasbot"):
+            command = message.content[len("rafasbot"):].strip()
+            
+            # rafasbot command prefix
+            if command.startswith(","):
+                command = command[1:].strip() # trim whitespace for faq list
+            
             await self.handle_command(message.channel, command)
             
-    async def handle_command(self, channel, command):
+    async def handle_command(self, channel, command) -> None:
         if command in ["explain language transfer", "explain lt",
-        "what is language transfer", "what is lt"]:
-            embed = languagetransfer_message()
+                       "what is language transfer", "what is lt"]:
+            embed = lt_message()
+            await channel.send(embed=embed)
+        else:
+            embed = faqlist_message()
             await channel.send(embed=embed)
 
 
@@ -47,22 +55,33 @@ tree = app_commands.CommandTree(client)
 
 async def template_command(
     interaction: discord.Interaction,
-    word: str,
+    word: str | None,
     gr_en: bool,
     hide_words: bool,
     min_sentences_shown: int,
     max_sentences_shown: int,
 ):
     wordref = Wordref(word, gr_en, hide_words, min_sentences_shown, max_sentences_shown)
-    wordref_embed = wordref.embed()
-    await interaction.response.send_message(embed=wordref_embed)
+    wordref_embed = wordref.fetch_embed()
+
+    # In case of failure, try again once with fixed spelling.
+    if wordref_embed is None and word is not None:
+        original_word = word
+        word = fix_greek_spelling(word)
+        print(f"Converted {original_word=} to {word=}")
+        wordref = Wordref(word, gr_en, hide_words, min_sentences_shown, max_sentences_shown)
+        wordref_embed = wordref.fetch_embed()
+
+    if wordref_embed is None:
+        await interaction.response.send_message("The command did not succeed.")
+    else:
+        await interaction.response.send_message(embed=wordref_embed)
     # try:
     #     wordref = Wordref(word, gr_en, hide_words, amount_sentences_shown)
     #     wordref_embed = wordref.embed()
     #     await interaction.response.send_message(embed=wordref_embed)
     # except Exception as e:
     #     await interaction.response.send_message(content=f"Error: {e}")
-
 
 # helper function for wiktionary stuff
 async def wiktionary_handler(
@@ -72,18 +91,15 @@ async def wiktionary_handler(
     ephemeral: str = "True",
 ):
     ephemeral = ephemeral.lower() in ["true", "yes", "1"]
-    embeds = wiktionary_message(word, language)
-
-    # send the response with the appropriate embed handling
+    embeds = await wiktionary_message(word, language)
+    
     if len(embeds) == 1:
         await interaction.response.send_message(embed=embeds[0], ephemeral=ephemeral)
     else:
         await interaction.response.send_message(embed=embeds[0], ephemeral=ephemeral)
-        # send each subsequent embed as a follow up
         for embed in embeds[1:]:
             await interaction.followup.send(embed=embed, ephemeral=ephemeral)
-        
-# english wiktionary word return
+
 @tree.command(name="wiktionary", description="Return the Wiktionary entry for a word")
 async def wiktionary(
     interaction: discord.Interaction,
@@ -92,7 +108,6 @@ async def wiktionary(
 ):
     await wiktionary_handler(interaction, word, language="english", ephemeral=ephemeral)
 
-# greek wiktionary word return
 @tree.command(name="wiktionarygr", description="Return the Wiktionary (Greek) entry for a word")
 async def wiktionarygr(
     interaction: discord.Interaction,
@@ -100,12 +115,8 @@ async def wiktionarygr(
     ephemeral: str = "True",
 ):
     await wiktionary_handler(interaction, word, language="greek", ephemeral=ephemeral)
-
-
-
-@tree.command(
-    name="wotdgr", description="Prompts a random Greek word from Wordref (default language is Greek)"
-)
+    
+@tree.command(name="wotdgr", description="Prompts a random Greek word from Wordref")
 async def wotdgr(interaction: discord.Interaction):
     await template_command(interaction, None, True, True, 1, 3)
 
@@ -138,13 +149,55 @@ async def date(interaction: discord.Interaction):
 
 @tree.command(name="forvo", description="Returns a link with a forvo pronunciation")
 async def forvo(interaction: discord.Interaction, word: str):
+    # We do not always want to fix the greek spelling because valid words may be
+    # modified by the query to `fix_greek_spelling`: ταξίδια => ταξίδι.
+
     message, audio_link, audio_file = pronunciation.get_pronunciation(word)
+
+    # In case of failure, try again once with fixed spelling.
+    if audio_link is None:
+        word = fix_greek_spelling(word)
+        message, audio_link, audio_file = pronunciation.get_pronunciation(word)
+
     if audio_link is None:
         await interaction.response.send_message(f"Could not find the word {word}!")
         return
+    assert audio_file is not None
     file = discord.File(audio_file, filename=f"{word}.mp3")
     await interaction.response.send_message(file=file, content=message)
 
-if __name__ == "__main__":
+
+@tree.command(name="conj", description="Returns the present tense of the verb.")
+async def conj(interaction: discord.Interaction, word: str):
+    conjugation = await fetch_conjugation(word)
+    if not conjugation:
+        prev_word = word
+        word = fix_greek_spelling(word)
+        if prev_word != word:
+            conjugation = await fetch_conjugation(word)
+    if not conjugation:
+        await interaction.response.send_message(f"Could not find conjugation for {word}.")
+        return
+
+    url = f"https://el.wiktionary.org/wiki/{word}"
+    list_contents = list(conjugation.items())
+    n = len(list_contents)
+
+    async def get_page(page: int):
+        verb_tense, conjugation = list_contents[page - 1]
+        emb = discord.Embed(title=word, description=f"{verb_tense}\n\n{conjugation}\n")
+        emb.url = url
+        emb.set_author(name=f"Requested by {interaction.user}")
+        emb.set_footer(text=f"Page {page} from {n}")
+        return emb, n
+
+    await Pagination(interaction, get_page).navigate()
+
+
+def main() -> None:
     config = dotenv_values(".env")
     client.run(config["TOKEN"])
+
+
+if __name__ == "__main__":
+    main()

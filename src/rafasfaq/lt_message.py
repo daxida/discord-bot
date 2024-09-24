@@ -13,6 +13,6 @@ def embed_message() -> discord.Embed:
         description=description,
         color=0x3392FF
     )
-    embed.set_footer(text=f"Learning Greek FAQ for RafasBot. Type \"rafasbot\" for FAQ list.")
+    embed.set_footer(text=faq_footer())
     
     return embed

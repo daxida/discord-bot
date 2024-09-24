@@ -1,9 +1,8 @@
-from wiktionary.wiktionaryel import fetch_wiktionary
+from wordlookup.wiktionaryel import fetch_wiktionary_pos
 from typing import List
 import json
 import discord
-import re  # Import re for regex
-
+import re
 
 def split_long_text(text: str, max_length: int) -> List[str]:
     """Splits the text into multiple parts if it exceeds max_length."""
@@ -19,9 +18,9 @@ def split_long_text(text: str, max_length: int) -> List[str]:
     return parts
 
 
-def embed_message(word: str, language: str) -> List[discord.Embed]:
+async def embed_message(word: str, language: str) -> List[discord.Embed]:
     """Fetches Wiktionary data and returns a list of discord.Embeds with split messages."""
-    res = fetch_wiktionary(word, language)
+    res = await fetch_wiktionary_pos(word, language)
     lang_str = "el" if language != "english" else "en"
 
     title = f"∙∙∙∙∙ {word} ∙∙∙∙∙"
