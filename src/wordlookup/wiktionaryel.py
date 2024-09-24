@@ -93,14 +93,6 @@ class WiktionaryQuery:
                 # remove the current element and move to next sibling
                 current_element.extract()
                 current_element = next_sibling
-    def remove_ancient_greek(soup: Any) -> None:
-        # find where the ancient greek section begins
-        tag_to_remove = soup.find("span", id="Αρχαία_ελληνικά_(grc)")
-        if tag_to_remove:
-            parent = tag_to_remove.find_parent()
-            # remove everything under ancient section (always below modern)
-            for sibling in parent.find_next_siblings():
-                sibling.extract()
 
 
 async def fetch_conjugation(word: str) -> dict[str, str] | None:
