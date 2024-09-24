@@ -1,4 +1,5 @@
 import discord
+from utils import faq_footer
 
 def embed_message() -> discord.Embed:
     title = "What is Language Transfer?"

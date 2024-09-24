@@ -1,6 +1,6 @@
 """
 Wiktionary Parser for Greek Pages
-Example usage: fetch_wiktionary("καλημέρα", blacklist=['Προφορά'])
+Example usage: fetch_wiktionary("καλημέρα", language="greek")
 Returns as a JSON containing word types and entries
 
 TODO: Unify the parsing.
