@@ -10,10 +10,10 @@ import asyncio
 import logging
 
 from typing import Any
-
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 
+default_language = "greek"
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("wiktionary")
 
@@ -109,7 +109,7 @@ async def fetch_conjugation(word: str) -> dict[str, str] | None:
     Retry with word variations by parsing wiktionary.
     """
 
-    query = await WiktionaryQuery.create(word, "greek")
+    query = await WiktionaryQuery.create(word, default_language)
     conjugation = await _fetch_conjugation(query)
     logger.info("Success." if conjugation else "Failure.")
     return conjugation
@@ -136,7 +136,7 @@ async def _fetch_conjugation(query: WiktionaryQuery) -> dict[str, str] | None:
             logger.warning(f"Reached {max_retries=}")
             return None
 
-        new_query = await WiktionaryQuery.create(suggestion, "greek")
+        new_query = await WiktionaryQuery.create(suggestion, default_language)
         res = _parse_conjugation(new_query)
         # If we succeed with a suggestion, just return it,
         # even if it is potentially not the best?
