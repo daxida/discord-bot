@@ -24,28 +24,6 @@ class MyClient(discord.Client):
             self.synced = True
         print(f"\033[32mBot is ready! {self.user}\033[0m")
 
-    async def on_message(self, message: discord.Message) -> None:
-        if message.author == self.user:
-            return
-        
-        if message.content.startswith("rafasbot"):
-            command = message.content[len("rafasbot"):].strip()
-            
-            # rafasbot command prefix
-            if command.startswith(","):
-                command = command[1:].strip() # trim whitespace for faq list
-            
-            await self.handle_command(message.channel, command)
-            
-    async def handle_command(self, channel, command) -> None:
-        if command in ["explain language transfer", "explain lt",
-                       "what is language transfer", "what is lt"]:
-            embed = lt_message()
-            await channel.send(embed=embed)
-        else:
-            embed = faqlist_message()
-            await channel.send(embed=embed)
-
 
 intents = discord.Intents.default()
 intents.message_content = True
