@@ -8,8 +8,6 @@ from utils import Pagination, fix_greek_spelling
 from wordlookup.wiktionaryel import fetch_conjugation
 from wordlookup.wiktionaryel import fetch_wiktionary_pos
 from wordlookup.embed_message import embed_message as wiktionary_message
-from rafasfaq.lt_message import embed_message as lt_message
-from rafasfaq.faqlist_message import embed_message as faqlist_message
 from wordref.wordref import Wordref
 
 class MyClient(discord.Client):
