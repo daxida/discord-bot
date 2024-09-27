@@ -8,8 +8,8 @@ TODO: Unify the parsing.
 
 import asyncio
 import logging
-
 from typing import Any
+
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 
@@ -51,7 +51,7 @@ class WiktionaryQuery:
         # https://stackoverflow.com/questions/33128325/how-to-set-class-attribute-with-await-in-init
         self = cls()
         self.word = word
-        
+
         # Not sure why we would want the printable version here.
         # less styling = scrapes faster probably
         lang_str = "en" if language == "english" else "el"
@@ -80,16 +80,16 @@ class WiktionaryQuery:
         else:
             remove_string = "Αρχαία_ελληνικά_(grc)"
             stop_at_string = None
-            
+
         tag_to_remove = soup.find("h2", id=remove_string)
-        
+
         if tag_to_remove:
             current_element = tag_to_remove.find_parent()
             while current_element:
                 next_sibling = current_element.find_next_sibling()
                 if next_sibling and stop_at_string and next_sibling.find("h2", string=stop_at_string):
                     break
-                
+
                 # remove the current element and move to next sibling
                 current_element.extract()
                 current_element = next_sibling
@@ -346,17 +346,13 @@ def _parse_conjugation_table_two(query: WiktionaryQuery) -> dict[str, str] | Non
     return relevant_parsed
 
 
-async def fetch_wiktionary_pos(
-    word: str, language: str
-) -> dict[str, list[str]]:
+async def fetch_wiktionary_pos(word: str, language: str) -> dict[str, list[str]]:
     query = await WiktionaryQuery.create(word, language)
     entries = parse_wiktionary_pos(query, language)
     return entries
 
 
-def parse_wiktionary_pos(
-    query: WiktionaryQuery, language: str
-) -> dict[str, list[str]]:
+def parse_wiktionary_pos(query: WiktionaryQuery, language: str) -> dict[str, list[str]]:
     entries = ENTRIES[:]
     if language == "english":
         entries = ENTRIES_EN[:]

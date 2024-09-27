@@ -1,6 +1,7 @@
 import urllib
 
 import discord
+
 from wordref.longest import highlight_synonyms
 
 TAG = "\033[35mENTRY:  \033[0m"

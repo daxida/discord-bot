@@ -1,14 +1,15 @@
 import discord
-import pronunciation.pronunciation as pronunciation
 from discord import app_commands
 from dotenv import dotenv_values
+
+import pronunciation.pronunciation as pronunciation
 from gr_datetime.gr_date import get_full_date
 from help.help import HelpMessage
 from utils import Pagination, fix_greek_spelling
-from wordlookup.wiktionaryel import fetch_conjugation
-from wordlookup.wiktionaryel import fetch_wiktionary_pos
 from wordlookup.embed_message import embed_message as wiktionary_message
+from wordlookup.wiktionaryel import fetch_conjugation, fetch_wiktionary_pos
 from wordref.wordref import Wordref
+
 
 class MyClient(discord.Client):
     def __init__(self, _intents: discord.Intents) -> None:
@@ -59,6 +60,7 @@ async def template_command(
     # except Exception as e:
     #     await interaction.response.send_message(content=f"Error: {e}")
 
+
 # helper function for wiktionary stuff
 async def wiktionary_handler(
     interaction: discord.Interaction,
@@ -68,13 +70,14 @@ async def wiktionary_handler(
 ):
     ephemeral = ephemeral.lower() in ["true", "yes", "1"]
     embeds = await wiktionary_message(word, language)
-    
+
     if len(embeds) == 1:
         await interaction.response.send_message(embed=embeds[0], ephemeral=ephemeral)
     else:
         await interaction.response.send_message(embed=embeds[0], ephemeral=ephemeral)
         for embed in embeds[1:]:
             await interaction.followup.send(embed=embed, ephemeral=ephemeral)
+
 
 @tree.command(name="wiktionary", description="Return the Wiktionary entry for a word")
 async def wiktionary(
@@ -84,6 +87,7 @@ async def wiktionary(
 ):
     await wiktionary_handler(interaction, word, language="english", ephemeral=ephemeral)
 
+
 @tree.command(name="wiktionarygr", description="Return the Wiktionary (Greek) entry for a word")
 async def wiktionarygr(
     interaction: discord.Interaction,
@@ -91,7 +95,8 @@ async def wiktionarygr(
     ephemeral: str = "True",
 ):
     await wiktionary_handler(interaction, word, language="greek", ephemeral=ephemeral)
-    
+
+
 @tree.command(name="wotdgr", description="Prompts a random Greek word from Wordref")
 async def wotdgr(interaction: discord.Interaction):
     await template_command(interaction, None, True, True, 1, 3)

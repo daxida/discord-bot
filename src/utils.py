@@ -34,7 +34,8 @@ GREEKLISH = str.maketrans(
         "z": "ζ",  # The Greek equivalent of 'z' is 'ζ'
     }
 )
-    
+
+
 def is_english(word: str) -> bool:
     return all(ord(ch) < 200 for ch in word)
 

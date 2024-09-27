@@ -1,19 +1,22 @@
-from wordlookup.wiktionaryel import fetch_wiktionary_pos
-from typing import List
 import json
-import discord
 import re
+from typing import List
+
+import discord
+
+from wordlookup.wiktionaryel import fetch_wiktionary_pos
+
 
 def split_long_text(text: str, max_length: int) -> List[str]:
     """Splits the text into multiple parts if it exceeds max_length."""
     parts = []
     while len(text) > max_length:
         # split at the last newline before the max_length to avoid cutting words mid-sentence
-        split_index = text.rfind('\n', 0, max_length)
+        split_index = text.rfind("\n", 0, max_length)
         if split_index == -1:
             split_index = max_length
         parts.append(text[:split_index])
-        text = text[split_index:].lstrip() # remove leading spaces or newlines
+        text = text[split_index:].lstrip()  # remove leading spaces or newlines
     parts.append(text)
     return parts
 
@@ -28,10 +31,18 @@ async def embed_message(word: str, language: str) -> List[discord.Embed]:
     description = ""
 
     important_keys = [
-        "Επίθετο", "Adjective", "Ουσιαστικό", "Noun", "Επίρρημα", "Adverb",
-        "Επιφώνημα", "Interjection", "Κλιτικός_τύπος_επιθέτου", "Κλιτικός_τύπος_ουσιαστικού"
+        "Επίθετο",
+        "Adjective",
+        "Ουσιαστικό",
+        "Noun",
+        "Επίρρημα",
+        "Adverb",
+        "Επιφώνημα",
+        "Interjection",
+        "Κλιτικός_τύπος_επιθέτου",
+        "Κλιτικός_τύπος_ουσιαστικού",
     ]
-    
+
     format_keys = ["Ετυμολογία", "Etymology", "Προφορά", "Pronunciation"]
 
     for key in res.keys():
@@ -59,7 +70,7 @@ async def embed_message(word: str, language: str) -> List[discord.Embed]:
             title=f"{title} (Part {i+1}/{len(embed_parts)})" if len(embed_parts) > 1 else title,
             url=link,
             description=part,
-            color=0x3392FF
+            color=0x3392FF,
         )
         embed.set_footer(text=f"https://forvo.com/word/{word}")
         embeds.append(embed)
