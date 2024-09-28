@@ -44,13 +44,14 @@ def printd(*args):
 
 
 class WiktionaryQuery:
-    __slots__ = "word", "soup"
+    __slots__ = "word", "language", "soup"
 
     @classmethod
     async def create(cls, word: str, language: str):
         # https://stackoverflow.com/questions/33128325/how-to-set-class-attribute-with-await-in-init
         self = cls()
         self.word = word
+        self.language = language
 
         # Not sure why we would want the printable version here.
         # less styling = scrapes faster probably

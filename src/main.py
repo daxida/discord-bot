@@ -7,7 +7,7 @@ from gr_datetime.gr_date import get_full_date
 from help.help import HelpMessage
 from utils import Pagination, fix_greek_spelling
 from wordlookup.embed_message import embed_message as wiktionary_message
-from wordlookup.wiktionaryel import fetch_conjugation, fetch_wiktionary_pos
+from wordlookup.wiktionaryel import fetch_conjugation
 from wordref.wordref import Wordref
 
 
@@ -22,6 +22,10 @@ class MyClient(discord.Client):
             await tree.sync()
             self.synced = True
         print(f"\033[32mBot is ready! {self.user}\033[0m")
+
+    async def on_message(self, message: discord.Message) -> None:
+        if message.author == self.user:
+            return
 
 
 intents = discord.Intents.default()
@@ -71,10 +75,8 @@ async def wiktionary_handler(
     ephemeral = ephemeral.lower() in ["true", "yes", "1"]
     embeds = await wiktionary_message(word, language)
 
-    if len(embeds) == 1:
-        await interaction.response.send_message(embed=embeds[0], ephemeral=ephemeral)
-    else:
-        await interaction.response.send_message(embed=embeds[0], ephemeral=ephemeral)
+    await interaction.response.send_message(embed=embeds[0], ephemeral=ephemeral)
+    if len(embeds) > 1:
         for embed in embeds[1:]:
             await interaction.followup.send(embed=embed, ephemeral=ephemeral)
 
