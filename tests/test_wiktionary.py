@@ -1,5 +1,4 @@
 import asyncio
-
 import pytest
 from wiktionaryel import run_test_fetch
 
