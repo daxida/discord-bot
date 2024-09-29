@@ -1,2 +1,22 @@
+[project]
+name = "rbot"
+version = "1.0.0"
+dependencies = [
+    "python-dotenv",
+    "discord",
+    "beautifulsoup4",
+    "requests",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest_asyncio",
+    "ruff",
+]
+
+[project.scripts]
+run = "rbot:main"
+
 [tool.ruff]
 line-length = 110
