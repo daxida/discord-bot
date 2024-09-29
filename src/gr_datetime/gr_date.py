@@ -1,5 +1,4 @@
-import datetime
-import re
+from datetime import datetime
 
 from gr_datetime.gr_numbers import num2word
 
@@ -29,23 +28,18 @@ MONTHS_GENITIVE = [
 ]
 
 
-def get_full_date():
-    fdate = get_date()
-    fhour = get_hour()
-
-    return f"{fdate} {fhour}"
+def get_full_date(dt: datetime = datetime.now()) -> str:
+    return f"{get_date(dt)} {get_hour(dt)}"
 
 
-def get_date():
-    today = datetime.date.today()
-    wd = today.weekday()
-    d, m, y = today.day, today.month, today.year
+def get_date(dt: datetime) -> str:
+    wd = dt.weekday()
+    d, m, y = dt.day, dt.month, dt.year
 
     str_wd = DAYS_NOMINATIVE[wd]
     str_d = num2word(d).capitalize()
-    # fem
-    str_d = re.sub("σσερα", "σσερις", str_d)
-    str_m = MONTHS_GENITIVE[m]
+    str_d = str_d.replace("σσερα", "σσερις")
+    str_m = MONTHS_GENITIVE[m - 1]
     str_y = num2word(y)
 
     fdate = f"Καλημέρα. Σήμερα η μέρα, εδώ που μένω εγώ, είναι {str_wd}, {str_d} (του) {str_m} (του έτους) {str_y}."
@@ -53,17 +47,14 @@ def get_date():
     return fdate
 
 
-def get_hour():
-    now = datetime.datetime.now()
-    h, m = now.hour, now.minute
+def get_hour(dt: datetime) -> str:
+    h, m = dt.hour, dt.minute
 
     pm = h > 12
     h %= 12
 
-    str_h = num2word(h)
     str_m = num2word(m)
-
-    # To fem
+    str_h = num2word(h)
     str_h = str_h.replace("ένα", "μία")
 
     fhour = f"Και η ώρα είναι {str_h}"
