@@ -1,6 +1,6 @@
 """
 Wiktionary Parser for Greek Pages
-Example usage: fetch_wiktionary("καλημέρα", blacklist=['Προφορά'])
+Example usage: fetch_wiktionary("καλημέρα", language="greek")
 Returns as a JSON containing word types and entries
 
 TODO: Unify the parsing.
@@ -8,27 +8,31 @@ TODO: Unify the parsing.
 
 import asyncio
 import logging
-
 from typing import Any
 
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 
+default_language = "greek"
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("wiktionary")
-
-# Not sure why we would want the printable version here.
-URL = "https://el.wiktionary.org/wiki/{}?printable=yes"
 
 # fmt: off
 ENTRIES = [
     "Ετυμολογία", "Ετυμολογία_1", "Ετυμολογία_2", 
     "Προφορά", "Προφορά_1", "Προφορά_2",
-    "Επιφώνημα", "Εκφράσεις",
-    "Ουσιαστικό", "Επίθετο", "Επίρρημα", "Μεταφράσεις",
-    "Συγγενικά", "Συνώνυμα", "Αντώνυμα", "Σύνθετα", "Δείτε_επίσης",
+    "Επιφώνημα", "Έκφραση", "Ουσιαστικό", 
+    "Εκφράσεις", "Επίθετο", "Επίρρημα", "Συνώνυμα", "Αντώνυμα",
     "Κλιτικός_τύπος_επιθέτου", "Κλιτικός_τύπος_ουσιαστικού",
-    "Πολυλεκτικοί_όροι", "Σημειώσεις",
+    "Πολυλεκτικοί_όροι", "Σημειώσεις"
+] # Μεταφράσεις, "Σύνθετα", "Συγγενικά" cut off here
+ENTRIES_EN = [
+    "Etymology", "Etymology_1", "Etymology_2",
+    "Pronunciation", "Pronunciation_2", "Pronunciation_3",
+    "Interjection", "Interjection_2", "Expression",
+    "Expression_2", "Expressions", "Noun", "Noun_2",
+    "Adjective", "Adjective_2", "Adverb", "Adverb_2",
+    "Related", "Synonyms", "Antonyms", "Synonyms_2", "Antonyms_2"
 ]
 # fmt: on
 
@@ -40,13 +44,19 @@ def printd(*args):
 
 
 class WiktionaryQuery:
-    __slots__ = "word", "soup"
+    __slots__ = "word", "language", "soup"
 
     @classmethod
-    async def create(cls, word: str):
+    async def create(cls, word: str, language: str):
         # https://stackoverflow.com/questions/33128325/how-to-set-class-attribute-with-await-in-init
         self = cls()
         self.word = word
+        self.language = language
+
+        # Not sure why we would want the printable version here.
+        # less styling = scrapes faster probably
+        lang_str = "en" if language == "english" else "el"
+        URL = f"https://{lang_str}.wiktionary.org/wiki/{{}}?printable=yes"
 
         url = URL.format(word)
         logger.info(f"{url=}")
@@ -56,20 +66,34 @@ class WiktionaryQuery:
                 page_content = await response.read()
 
         soup = BeautifulSoup(page_content, "html.parser")
-        WiktionaryQuery.remove_ancient_greek(soup)
+        WiktionaryQuery.remove_ancient_greek(soup, language)
+
         self.soup = soup
 
         return self
 
     @staticmethod
-    def remove_ancient_greek(soup: Any) -> None:
+    def remove_ancient_greek(soup: Any, language: str) -> None:
         # find where the ancient greek section begins
-        tag_to_remove = soup.find("span", id="Αρχαία_ελληνικά_(grc)")
+        if language == "english":
+            remove_string = "Ancient_Greek"
+            stop_at_string = "Greek"
+        else:
+            remove_string = "Αρχαία_ελληνικά_(grc)"
+            stop_at_string = None
+
+        tag_to_remove = soup.find("h2", id=remove_string)
+
         if tag_to_remove:
-            parent = tag_to_remove.find_parent()
-            # remove everything under ancient section (always below modern)
-            for sibling in parent.find_next_siblings():
-                sibling.extract()
+            current_element = tag_to_remove.find_parent()
+            while current_element:
+                next_sibling = current_element.find_next_sibling()
+                if next_sibling and stop_at_string and next_sibling.find("h2", string=stop_at_string):
+                    break
+
+                # remove the current element and move to next sibling
+                current_element.extract()
+                current_element = next_sibling
 
 
 async def fetch_conjugation(word: str) -> dict[str, str] | None:
@@ -77,7 +101,8 @@ async def fetch_conjugation(word: str) -> dict[str, str] | None:
     Fetch the verb conjugation table from a word.
     Retry with word variations by parsing wiktionary.
     """
-    query = await WiktionaryQuery.create(word)
+
+    query = await WiktionaryQuery.create(word, default_language)
     conjugation = await _fetch_conjugation(query)
     logger.info("Success." if conjugation else "Failure.")
     return conjugation
@@ -104,7 +129,7 @@ async def _fetch_conjugation(query: WiktionaryQuery) -> dict[str, str] | None:
             logger.warning(f"Reached {max_retries=}")
             return None
 
-        new_query = await WiktionaryQuery.create(suggestion)
+        new_query = await WiktionaryQuery.create(suggestion, default_language)
         res = _parse_conjugation(new_query)
         # If we succeed with a suggestion, just return it,
         # even if it is potentially not the best?
@@ -322,22 +347,16 @@ def _parse_conjugation_table_two(query: WiktionaryQuery) -> dict[str, str] | Non
     return relevant_parsed
 
 
-async def fetch_wiktionary_pos(
-    word: str, blacklist: list[str] = [], whitelist: list[str] = []
-) -> dict[str, list[str]]:
-    query = await WiktionaryQuery.create(word)
-    entries = parse_wiktionary_pos(query, blacklist, whitelist)
+async def fetch_wiktionary_pos(word: str, language: str) -> dict[str, list[str]]:
+    query = await WiktionaryQuery.create(word, language)
+    entries = parse_wiktionary_pos(query, language)
     return entries
 
 
-def parse_wiktionary_pos(
-    query: WiktionaryQuery, blacklist: list[str] = [], whitelist: list[str] = []
-) -> dict[str, list[str]]:
+def parse_wiktionary_pos(query: WiktionaryQuery, language: str) -> dict[str, list[str]]:
     entries = ENTRIES[:]
-    if whitelist:
-        entries = whitelist
-    for entry in blacklist:
-        entries.remove(entry)
+    if language == "english":
+        entries = ENTRIES_EN[:]
 
     parts_of_speech: dict[str, list[str]] = dict()
     for entry in entries:
@@ -350,7 +369,7 @@ def parse_wiktionary_pos(
 
 def parse_entry(query: WiktionaryQuery, entry_type: str) -> list[str] | None:
     # find position of page element with desired type
-    results = query.soup.find("span", id=entry_type)
+    results = query.soup.find(["h3", "h4"], id=entry_type)
     if not results:
         return None
 
