@@ -3,6 +3,8 @@ from discord import app_commands
 from dotenv import dotenv_values
 
 import pronunciation.pronunciation as pronunciation
+from faq.faqlist_message import embed_message as faqlist_message
+from faq.lt_message import embed_message as lt_message
 from gr_datetime.gr_date import get_full_date
 from help.help import HelpMessage
 from utils import NotFoundException, Pagination, fix_greek_spelling
@@ -26,6 +28,23 @@ class MyClient(discord.Client):
     async def on_message(self, message: discord.Message) -> None:
         if message.author == self.user:
             return
+
+        if message.content.startswith("rafasbot"):
+            command = message.content[len("rafasbot") :].strip()
+
+            # rafasbot command prefix
+            if command.startswith(","):
+                command = command[1:].strip()  # trim whitespace for faq list
+
+            await self.handle_command(message.channel, command)
+
+    async def handle_command(self, channel, command) -> None:
+        if command in ["explain language transfer", "explain lt", "what is language transfer", "what is lt"]:
+            embed = lt_message()
+            await channel.send(embed=embed)
+        else:
+            embed = faqlist_message()
+            await channel.send(embed=embed)
 
 
 intents = discord.Intents.default()

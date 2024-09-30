@@ -41,6 +41,10 @@ GREEKLISH = str.maketrans(
 )
 
 
+def faq_footer() -> str:
+    return f'Learning Greek FAQ for RafasBot. Type "rafasbot" for the full FAQ list.'
+
+
 def is_english(word: str) -> bool:
     return all(ord(ch) < 200 for ch in word)
 

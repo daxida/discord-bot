@@ -1,5 +1,4 @@
 import asyncio
-
 import pytest
 
 from wiktionary.wiktionary import fetch_conjugation, fetch_wiktionary_pos
