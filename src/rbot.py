@@ -6,8 +6,8 @@ import pronunciation.pronunciation as pronunciation
 from gr_datetime.gr_date import get_full_date
 from help.help import HelpMessage
 from utils import NotFoundException, Pagination, fix_greek_spelling
-from wordlookup.embed_message import embed_message as wiktionary_message
-from wordlookup.wiktionaryel import fetch_conjugation
+from wiktionary.embed_message import embed_message as wiktionary_message
+from wiktionary.wiktionary import fetch_conjugation
 from wordref.wordref import Wordref
 
 

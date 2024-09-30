@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from wordlookup.wiktionaryel import run_test_fetch
+from wiktionary.wiktionary import run_test_fetch
 
 # https://stackoverflow.com/questions/70015634/how-to-test-async-function-using-pytest
 pytest_plugins = ("pytest_asyncio",)

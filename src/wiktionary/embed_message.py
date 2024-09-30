@@ -4,7 +4,7 @@ from typing import List
 
 import discord
 
-from wordlookup.wiktionaryel import fetch_wiktionary_pos
+from wiktionary.wiktionary import fetch_wiktionary_pos
 
 
 def split_long_text(text: str, max_length: int) -> List[str]:

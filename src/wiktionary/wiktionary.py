@@ -47,7 +47,7 @@ class WiktionaryQuery:
     __slots__ = "word", "language", "soup"
 
     @classmethod
-    async def create(cls, word: str, language: str):
+    async def create(cls, word: str, language: str, printable: bool = True):
         # https://stackoverflow.com/questions/33128325/how-to-set-class-attribute-with-await-in-init
         self = cls()
         self.word = word
@@ -56,7 +56,9 @@ class WiktionaryQuery:
         # Not sure why we would want the printable version here.
         # less styling = scrapes faster probably
         lang_str = "en" if language == "english" else "el"
-        URL = f"https://{lang_str}.wiktionary.org/wiki/{{}}?printable=yes"
+        URL = f"https://{lang_str}.wiktionary.org/wiki/{{}}"
+        if printable:
+            URL += "?printable=yes"
 
         url = URL.format(word)
         logger.info(f"{url=}")
@@ -102,7 +104,7 @@ async def fetch_conjugation(word: str) -> dict[str, str] | None:
     Retry with word variations by parsing wiktionary.
     """
 
-    query = await WiktionaryQuery.create(word, default_language)
+    query = await WiktionaryQuery.create(word, default_language, printable=False)
     conjugation = await _fetch_conjugation(query)
     logger.info("Success." if conjugation else "Failure.")
     return conjugation
@@ -114,6 +116,7 @@ async def _fetch_conjugation(query: WiktionaryQuery) -> dict[str, str] | None:
         return res
 
     logger.info("Trying suggestions.")
+    # FIXME: parses too many things
     suggestions = parse_suggestions(query)
     logger.info(f"Found {len(suggestions)} suggestions.")
     # Maybe there are cyclic references?
@@ -129,7 +132,7 @@ async def _fetch_conjugation(query: WiktionaryQuery) -> dict[str, str] | None:
             logger.warning(f"Reached {max_retries=}")
             return None
 
-        new_query = await WiktionaryQuery.create(suggestion, default_language)
+        new_query = await WiktionaryQuery.create(suggestion, default_language, printable=False)
         res = _parse_conjugation(new_query)
         # If we succeed with a suggestion, just return it,
         # even if it is potentially not the best?
@@ -189,7 +192,7 @@ def _parse_conjugation(query: WiktionaryQuery) -> dict[str, str] | None:
     # Check that the conjugation header is there.
     # Note that the header doesn't guarantee a valid conjugation table.
     # cf. https://el.wiktionary.org/wiki/βρέχω?printable=yes
-    if query.soup.find("span", {"id": "Κλίση"}) is None:
+    if query.soup.find("h4", {"id": "Κλίση"}) is None:
         logger.info(f"{query.word} has no conjugation table.")
         return None
 
