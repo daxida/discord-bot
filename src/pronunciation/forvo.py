@@ -1,50 +1,211 @@
+# From: https://github.com/realmayus/anki_forvo_dl/blob/main/src/Forvo.py
+
 import base64
 import io
+import random
 import re
-from typing import Tuple
+import time
+import urllib.parse
+import urllib.request
+from dataclasses import dataclass
+from typing import List, Union
+from urllib.error import HTTPError
 
 import requests
+from bs4 import BeautifulSoup
 
-# FROM: https://gist.github.com/mikob/24a908471e38370f40d302b1cb1b41fb
-# TODO: Print all possible pronunciations?
+from utils import NotFoundException
 
-FAKE_BROWSER_HEADERS = {
-    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
-    "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36",
-    "accept-language": "en-US,en;q=0.9,ja;q=0.8",
-    "cache-control": "no-cache",
-    "pragma": "no-cache",
-    "sec-fetch-mode": "navigate",
-    "sec-fetch-site": "none",
-    "sec-fetch-user": "?1",
-    "upgrade-insecure-requests": "1",
-}
+search_url = "https://forvo.com/word/"
+download_url = "https://forvo.com/download/mp3/"
 
 
-def get_forvo_pronunciation_link(word: str) -> str | None:
-    webPageUrl = f"https://forvo.com/search/{word}/el/"
-    # s = requests.Session()
-    # res = s.get('https://forvo.com')
-    # cookies = dict(res.cookies)
-    webPageText = requests.get(webPageUrl, headers=FAKE_BROWSER_HEADERS).text
-    pageTextList = re.findall('<article class="search_words.*?</article>', webPageText, re.DOTALL)
-    if len(pageTextList) > 0:
-        # first result might be search_words empty
-        pageText = pageTextList[-1]
-        pronunciations = re.findall("Play\(\d+,'(.*?)'", pageText)
-        if pronunciations:
-            for l in range(len(pronunciations)):
-                pronunciations[l] = base64.b64decode(pronunciations[l]).decode()
-            print("Found %d pronunciations for %s" % (len(pronunciations), word))
-            return "https://forvo.com/mp3/%s" % pronunciations[0]
-    return None
+def log_debug(msg):
+    # print(msg)
+    pass
 
 
-def get_forvo_pronunciation_audio(word: str) -> Tuple[str | None, io.BytesIO | None]:
-    audio_link = get_forvo_pronunciation_link(word)
-    # Could not find the forvo link for this word.
-    if audio_link is None:
-        return (None, None)
-    response = requests.get(audio_link, headers=FAKE_BROWSER_HEADERS)
+@dataclass
+class Pronunciation:
+    language: str
+    user: str
+    origin: str
+    id: int
+    votes: int
+    download_url: str
+    is_ogg: bool
+    word: str
+    audio: Union[str, None] = None
+
+
+HEADERS = [
+    (
+        "User-Agent",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
+    ),
+    (
+        "Accept",
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    ),
+    ("Accept-Language", "en-US,en;q=0.5"),
+    ("Referer", "https://forvo.com/"),
+]
+
+
+class Forvo:
+    def __init__(self, word: str, language: str):
+        self.html: BeautifulSoup
+        self.language = language
+        word = word.strip()
+        log_debug("[Forvo.py] Using search query: %s" % word)
+        self.word = word
+        self.pronunciations: List[Pronunciation] = []
+
+        # Set a user agent so that Forvo/CloudFlare lets us access the page
+        opener = urllib.request.build_opener()
+
+        opener.addheaders = HEADERS
+        urllib.request.install_opener(opener)
+
+    def load_search_query(self):
+        """Retries only in case of 403: Forbidden."""
+        for _ in range(3):
+            try:
+                self._load_search_query()
+            except HTTPError as e:
+                if e.code != 403:
+                    raise e
+                time.sleep(0.5)
+
+    def _load_search_query(self):
+        """Loads the search result page on Forvo"""
+        try:
+            log_debug("[Forvo.py] Reading result page")
+            page = urllib.request.urlopen(url=search_url + urllib.parse.quote_plus(self.word)).read()
+            log_debug("[Forvo.py] Done with reading result page")
+
+            log_debug("[Forvo.py] Initializing BS4")
+            self.html = BeautifulSoup(page, "html.parser")
+            log_debug("[Forvo.py] Initialized BS4")
+        except HTTPError as e:
+            log_debug(f"[Forvo.py] HTTPError: {e}")
+            if e.code == 404:
+                raise NotFoundException()
+            else:
+                # Sometimes we can get 403: Forbidden
+                raise e
+        except Exception as e:
+            log_debug("[Forvo.py] Exception: " + str(e))
+            raise e
+
+    def get_pronunciations(self):
+        """Creates pronunciation objects from the soup"""
+        log_debug("[Forvo.py] Searching language containers")
+        available_langs_el = self.html.find_all(id=re.compile(r"language-container-\w{2,4}"))
+        log_debug("[Forvo.py] Done searching language containers")
+        log_debug("[Forvo.py] Compiling list of available langs")
+        available_langs = [
+            re.findall(r"language-container-(\w{2,4})", el.attrs["id"])[0] for el in available_langs_el
+        ]
+        if self.language not in available_langs:
+            raise NotFoundException()
+        log_debug("[Forvo.py] Done compiling list of available langs")
+
+        log_debug("[Forvo.py] Searching lang container")
+        lang_container = [
+            lang
+            for lang in available_langs_el
+            if re.findall(r"language-container-(\w{2,4})", lang.attrs["id"])[0] == self.language
+        ][0]
+        log_debug("[Forvo.py] Done searching lang container")
+
+        log_debug("[Forvo.py] Going through all pronunciations")
+        for accents in lang_container.find_all(class_="pronunciations")[0].find_all(
+            class_="pronunciations-list"
+        ):
+            for pronunciation in accents.find_all("li"):
+                if len(pronunciation.find_all(class_="more")) == 0:
+                    continue
+
+                vote_count = (
+                    pronunciation.find_all(class_="more")[0]
+                    .find_all(class_="main_actions")[0]
+                    .find_all(id=re.compile(r"word_rate_\d+"))[0]
+                    .find_all(class_="num_votes")[0]
+                )
+
+                vote_count_inner_span = vote_count.find_all("span")
+                if len(vote_count_inner_span) == 0:
+                    vote_count = 0
+                else:
+                    vote_count = int(str(re.findall(r"(-?\d+).*", vote_count_inner_span[0].contents[0])[0]))
+
+                pronunciation_dls = re.findall(
+                    r"Play\(\d+,'.+','.+',\w+,'([^']+)",
+                    pronunciation.find_all(id=re.compile(r"play_\d+"))[0].attrs["onclick"],
+                )
+
+                is_ogg = False
+                if len(pronunciation_dls) == 0:
+                    """Fallback to .ogg file"""
+                    pronunciation_dl = re.findall(
+                        r"Play\(\d+,'[^']+','([^']+)",
+                        pronunciation.find_all(id=re.compile(r"play_\d+"))[0].attrs["onclick"],
+                    )[0]
+                    dl_url = "https://audio00.forvo.com/ogg/" + str(
+                        base64.b64decode(pronunciation_dl), "utf-8"
+                    )
+                    is_ogg = True
+                else:
+                    pronunciation_dl = pronunciation_dls[0]
+                    dl_url = "https://audio00.forvo.com/audios/mp3/" + str(
+                        base64.b64decode(pronunciation_dl), "utf-8"
+                    )
+
+                author_info = pronunciation.find_all(
+                    lambda el: bool(el.find_all(string=re.compile("Pronunciation by"))),
+                    class_="info",
+                )[0]
+                username = re.findall("Pronunciation by(.*)", author_info.get_text(" "), re.S)[0].strip()
+                # data-p* appears to be a way to define arguments for click event
+                # handlers; heuristic: if there's only one unique integer value,
+                # then it's the ID
+                id_ = next(
+                    iter(
+                        {
+                            int(v)
+                            for link in pronunciation.find_all(class_="ofLink")
+                            for k, v in link.attrs.items()
+                            if re.match(r"^data-p\d+$", k) and re.match(r"^\d+$", v)
+                        }
+                    )
+                )
+                if id_:
+                    self.pronunciations.append(
+                        Pronunciation(
+                            self.language,
+                            username,
+                            pronunciation.find_all(class_="from")[0].contents[0],
+                            id_,
+                            vote_count,
+                            dl_url,
+                            is_ogg,
+                            self.word,
+                        )
+                    )
+
+        return self
+
+
+def get_forvo_pronunciation_audio(word: str) -> io.BytesIO:
+    """Can raise if 404: NotFound, or 403: Forbidden"""
+    f = Forvo(word, "el")
+    f.load_search_query()
+    f.get_pronunciations()
+
+    # pronunciation = f.pronunciations[0]
+    pronunciation = random.choice(f.pronunciations)
+    response = requests.get(pronunciation.download_url, headers=dict(HEADERS))
     audio_file = io.BytesIO(response.content)
-    return (audio_link, audio_file)
+
+    return audio_file

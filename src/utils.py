@@ -4,6 +4,11 @@ import discord
 import requests
 from bs4 import BeautifulSoup
 
+
+class NotFoundException(Exception):
+    pass
+
+
 GREEKLISH = str.maketrans(
     {
         "a": "α",

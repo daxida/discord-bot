@@ -5,7 +5,7 @@ from dotenv import dotenv_values
 import pronunciation.pronunciation as pronunciation
 from gr_datetime.gr_date import get_full_date
 from help.help import HelpMessage
-from utils import Pagination, fix_greek_spelling
+from utils import NotFoundException, Pagination, fix_greek_spelling
 from wordlookup.embed_message import embed_message as wiktionary_message
 from wordlookup.wiktionaryel import fetch_conjugation
 from wordref.wordref import Wordref
@@ -135,17 +135,17 @@ async def forvo(interaction: discord.Interaction, word: str):
     # We do not always want to fix the greek spelling because valid words may be
     # modified by the query to `fix_greek_spelling`: ταξίδια => ταξίδι.
 
-    message, audio_link, audio_file = pronunciation.get_pronunciation(word)
-
-    # In case of failure, try again once with fixed spelling.
-    if audio_link is None:
+    try:
+        message, audio_file = pronunciation.get_pronunciation(word)
+    except NotFoundException:
+        # In case of failure, try again once with fixed spelling.
         word = fix_greek_spelling(word)
-        message, audio_link, audio_file = pronunciation.get_pronunciation(word)
+        try:
+            message, audio_file = pronunciation.get_pronunciation(word)
+        except NotFoundException:
+            await interaction.response.send_message(f"Could not find the word {word}!")
+            return
 
-    if audio_link is None:
-        await interaction.response.send_message(f"Could not find the word {word}!")
-        return
-    assert audio_file is not None
     file = discord.File(audio_file, filename=f"{word}.mp3")
     await interaction.response.send_message(file=file, content=message)
 
