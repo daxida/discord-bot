@@ -6,12 +6,13 @@ Returns as a JSON containing word types and entries
 TODO: Unify the parsing.
 """
 
-import asyncio
 import logging
 from typing import Any
 
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
+
+from utils import get_language_code
 
 default_language = "greek"
 logging.basicConfig(level=logging.INFO)
@@ -51,12 +52,10 @@ class WiktionaryQuery:
         # https://stackoverflow.com/questions/33128325/how-to-set-class-attribute-with-await-in-init
         self = cls()
         self.word = word
-        self.language = language
 
+        lcode = get_language_code(language)
         # Not sure why we would want the printable version here.
-        # less styling = scrapes faster probably
-        lang_str = "en" if language == "english" else "el"
-        URL = f"https://{lang_str}.wiktionary.org/wiki/{{}}"
+        URL = f"https://{lcode}.wiktionary.org/wiki/{{}}"
         if printable:
             URL += "?printable=yes"
 
@@ -76,7 +75,7 @@ class WiktionaryQuery:
 
     @staticmethod
     def remove_ancient_greek(soup: Any, language: str) -> None:
-        # find where the ancient greek section begins
+        """Mutates soup to remove ancient greek elements."""
         if language == "english":
             remove_string = "Ancient_Greek"
             stop_at_string = "Greek"
@@ -84,9 +83,7 @@ class WiktionaryQuery:
             remove_string = "Αρχαία_ελληνικά_(grc)"
             stop_at_string = None
 
-        tag_to_remove = soup.find("h2", id=remove_string)
-
-        if tag_to_remove:
+        if tag_to_remove := soup.find("h2", id=remove_string):
             current_element = tag_to_remove.find_parent()
             while current_element:
                 next_sibling = current_element.find_next_sibling()
@@ -403,13 +400,5 @@ def parse_entry(query: WiktionaryQuery, entry_type: str) -> list[str] | None:
     return entry_elements
 
 
-async def run_test_fetch(word: str) -> dict[str, str] | None:
-    # pos = await fetch_wiktionary_pos(word)
-    # printd(pos)
-    res = await fetch_conjugation(word)
-    return res
-
-
 if __name__ == "__main__":
-    word = "έρχομαι"
-    asyncio.run(run_test_fetch(word))
+    pass

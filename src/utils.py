@@ -45,6 +45,16 @@ def is_english(word: str) -> bool:
     return all(ord(ch) < 200 for ch in word)
 
 
+def get_language_code(language: str) -> str:
+    match language:
+        case "english":
+            return "en"
+        case "greek":
+            return "el"
+        case _:
+            raise NotImplementedError(f"Language {language} is not supported")
+
+
 def greeklish_to_greek_characters(word: str) -> str:
     return word.lower().translate(GREEKLISH)
 

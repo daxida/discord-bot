@@ -1,13 +1,12 @@
-import json
 import re
-from typing import List
 
 import discord
 
+from utils import get_language_code
 from wiktionary.wiktionary import fetch_wiktionary_pos
 
 
-def split_long_text(text: str, max_length: int) -> List[str]:
+def split_long_text(text: str, max_length: int) -> list[str]:
     """Splits the text into multiple parts if it exceeds max_length."""
     parts = []
     while len(text) > max_length:
@@ -21,13 +20,14 @@ def split_long_text(text: str, max_length: int) -> List[str]:
     return parts
 
 
-async def embed_message(word: str, language: str) -> List[discord.Embed]:
+async def embed_message(word: str, language: str) -> list[discord.Embed]:
     """Fetches Wiktionary data and returns a list of discord.Embeds with split messages."""
     res = await fetch_wiktionary_pos(word, language)
-    lang_str = "el" if language != "english" else "en"
+
+    lcode = get_language_code(language)
 
     title = f"∙∙∙∙∙ {word} ∙∙∙∙∙"
-    link = f"https://{lang_str}.wiktionary.org/wiki/{word}"
+    link = f"https://{lcode}.wiktionary.org/wiki/{word}"
     description = ""
 
     important_keys = [
