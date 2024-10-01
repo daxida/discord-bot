@@ -1,3 +1,4 @@
+import pprint
 import urllib
 
 import discord
@@ -203,4 +204,4 @@ class Entry:
         self.embed = embed
 
     def __str__(self):
-        return str(vars(self)).replace(", ", "\n")
+        return pprint.pformat(vars(self), indent=1)
