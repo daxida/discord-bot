@@ -1,3 +1,4 @@
+import json
 from typing import Callable, Optional
 
 import discord
@@ -53,6 +54,10 @@ def get_language_code(language: str) -> str:
             return "el"
         case _:
             raise NotImplementedError(f"Language {language} is not supported")
+
+
+def print_json(obj):
+    print(json.dumps(obj, indent=2, ensure_ascii=False))
 
 
 def greeklish_to_greek_characters(word: str) -> str:

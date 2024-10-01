@@ -38,12 +38,6 @@ ENTRIES_EN = [
 # fmt: on
 
 
-def printd(*args):
-    import json
-
-    print(json.dumps(args, indent=2, ensure_ascii=False))
-
-
 class WiktionaryQuery:
     __slots__ = "word", "language", "soup"
 
