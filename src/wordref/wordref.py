@@ -95,10 +95,6 @@ class Wordref:
 
         self.max_random_iterations = 5
 
-    def debug(self) -> None:
-        entry = self.fetch_entry()
-        return entry.debug(self.amount_sentences_shown)
-
     def fetch_embed(self) -> Embed | None:
         if not self.is_random:
             embed = self.try_fetch_embed()
@@ -156,7 +152,7 @@ class Wordref:
 
         print(f"{TAG} requesting {self.url}")
         print(f"{TAG} trying to fetch '{self.word=}' ({link})")
-        print(f"{TAG}\n{entry}")
+        # print(f"{TAG}\n{entry}")
 
         for res in soup.find_all("table", {"class": "WRD"}):
             self.try_fetch_word(res, entry)
